@@ -1,0 +1,11 @@
+{
+  "name": "nexus",
+  "version": "0.1.0",
+  "description": "Pliant Sales Team productivity plugin — daily dashboard, deal prep, email follow-ups",
+  "skills": [
+    "skills/sales-dashboard",
+    "skills/deal-prep",
+    "skills/email-followup"
+  ],
+  "hooks": "hooks/hooks.json"
+}

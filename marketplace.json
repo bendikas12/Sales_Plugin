@@ -1,0 +1,15 @@
+{
+  "name": "pliant-marketplace",
+  "owner": {
+    "name": "Pliant RevOps",
+    "email": "revops@getpliant.com"
+  },
+  "plugins": [
+    {
+      "name": "nexus",
+      "source": ".",
+      "description": "Pliant Sales Team productivity plugin — daily dashboard, deal prep, email follow-ups",
+      "version": "0.1.0"
+    }
+  ]
+}

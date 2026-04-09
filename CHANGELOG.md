@@ -1,3 +1,8 @@
+## 0.4.3 - 2026-04-09
+- Fixed: replaced inline `cat` hook with dedicated `hooks/load-hubspot-glossary.sh` script
+- Fixed: hook now returns structured JSON with `systemMessage` for proper context injection
+- Fixed: use `$CLAUDE_PLUGIN_ROOT` (correct plugin env var), matcher `startup|resume`, error handling, and status message
+
 ## 0.4.2 - 2026-04-09
 - Fixed: corrected SessionStart hook JSON structure — added required `matcher` level and `type: "command"` field
 - Fixed: use `$CLAUDE_PROJECT_DIR` for glossary path so it resolves correctly regardless of working directory

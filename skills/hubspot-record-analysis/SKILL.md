@@ -1,7 +1,6 @@
 ---
 description: "Work with any HubSpot record — deal, contact, or company. Executes based on what you ask: full analysis, a specific question, or recent communications. Accepts a name, ID, or HubSpot URL."
 argument-hint: "[deal/contact/company name, ID, or HubSpot URL]"
-allowed-tools: mcp__65af63f1-c198-41c6-a145-1c45ebb0e415__get_user_details mcp__65af63f1-c198-41c6-a145-1c45ebb0e415__search_crm_objects mcp__65af63f1-c198-41c6-a145-1c45ebb0e415__get_crm_objects mcp__65af63f1-c198-41c6-a145-1c45ebb0e415__search_properties mcp__65af63f1-c198-41c6-a145-1c45ebb0e415__get_properties mcp__65af63f1-c198-41c6-a145-1c45ebb0e415__search_owners
 ---
 
 The user has invoked the HubSpot record skill. The argument (if provided) is: $ARGUMENTS

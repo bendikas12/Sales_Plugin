@@ -1,3 +1,7 @@
+## 0.4.4 - 2026-04-09
+- Added: pipeline ID lookup table to glossary — maps all 6 pipeline IDs to human-readable names (Pre-Sales Pipeline, Sales Pipeline, Referrer, Partner Team, Banking, Insurance)
+- Fixed: marked `pipeline` field type as `enumeration` with note that it returns an ID
+
 ## 0.4.3 - 2026-04-09
 - Fixed: replaced inline `cat` hook with dedicated `hooks/load-hubspot-glossary.sh` script
 - Fixed: hook now returns structured JSON with `systemMessage` for proper context injection

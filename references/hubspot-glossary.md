@@ -8,7 +8,7 @@ This is the authoritative reference for HubSpot property names used at Pliant. A
 |---|---|---|---|
 | Deal name | `dealname` | string | name, deal |
 | Deal stage | `name_of_deal_stage` | string | stage, status, pipeline stage. **Use this, NOT `dealstage`** (which returns an internal ID) |
-| Pipeline | `pipeline` | string | pipe, sales pipeline |
+| Pipeline | `pipeline` | enumeration | pipe, sales pipeline. **Returns an ID — use the lookup table below to get the human-readable name** |
 | Expected monthly transaction volume | `expected_monthly_transaction_volume` | number | expected trx, expected volume, monthly trx, expected monthly trx |
 | Total addressable monthly transaction volume | `total_addressable_monthly_transaction_volume` | number | addressable volume, addressable trx, total addressable, TAM volume |
 | Trx volume (last 0–30 days) | `trx_vol_last_0_to_30_days` | number | last 30 days trx, recent volume, this month trx |
@@ -43,6 +43,19 @@ This is the authoritative reference for HubSpot property names used at Pliant. A
 | Sub-Vertical | `sub_vertical` | string | sub-industry, segment |
 | Country/Region | `country_region` | string | country, region, location |
 | Owner | `hubspot_owner_id` | string | rep, assigned to, account owner |
+
+## Pipeline ID lookup
+
+The `pipeline` field returns a numeric ID. Use this table to resolve it to a name:
+
+| Pipeline ID | Pipeline Name |
+|---|---|
+| `14755466` | Pre-Sales Pipeline |
+| `16177355` | Sales Pipeline |
+| `4015640` | Referrer |
+| `18930566` | Partner Team |
+| `25225019` | Banking |
+| `1928248520` | Insurance |
 
 ## Deal stage meanings
 

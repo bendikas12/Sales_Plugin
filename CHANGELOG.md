@@ -1,3 +1,7 @@
+## 0.2.2 - 2026-04-09
+- Fixed: hubspot-record-analysis — added hard output constraints so the AI follows the template exactly and does not add extra fields/tables for deals, contacts, or companies
+- Fixed: hubspot-record-analysis — search_owners ToolSearch now uses portable keyword query instead of hardcoded MCP server UUID, so it works across all environments
+
 ## 0.2.1 - 2026-04-09
 - Fixed: hubspot-record-analysis — corrected field names to `expected_monthly_transaction_volume` and `total_addressable_monthly_transaction_volume`
 - Fixed: hubspot-record-analysis — use `name_of_deal_stage` instead of `dealstage` to get human-readable stage label

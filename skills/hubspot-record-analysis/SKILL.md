@@ -6,6 +6,10 @@ allowed-tools: mcp__65af63f1-c198-41c6-a145-1c45ebb0e415__get_user_details mcp__
 
 The user has invoked the HubSpot record skill. The argument (if provided) is: $ARGUMENTS
 
+## Output rules — READ THIS FIRST
+
+You **MUST** follow the output structure defined in Step 5 **exactly**. Do not add extra fields, tables, columns, or sections beyond what is specified there. If the user wants additional detail, they will ask for it explicitly. This is a hard constraint, not a suggestion.
+
 ## Step 1 — Resolve the record
 
 **If `$ARGUMENTS` contains a HubSpot URL** (e.g. `https://app.hubspot.com/contacts/12345/record/0-3/67890`):
@@ -43,7 +47,7 @@ Use the appropriate HubSpot tool to retrieve the record:
 - **First, call `get_crm_objects` without specifying a properties list** — this returns all default properties and lets you see the full data model before filtering. Use this to verify field names actually exist and contain data before presenting results.
 - If you need to confirm whether a specific custom property exists, call `search_properties` with the objectType and a keyword.
 - For properties you do request by name, use the verified field names from the property reference below.
-- Resolve `hubspot_owner_id` using `search_owners` to show the owner's name, not just the ID
+- Resolve `hubspot_owner_id` using `search_owners` to show the owner's name, not just the ID. **Important:** To load the `search_owners` tool schema, use `ToolSearch` with the keyword query `owners` (not `search_owners`, which matches the wrong tool). Do NOT use the `select:` prefix with a hardcoded tool name — the tool's full name includes an MCP server prefix that varies by environment.
 
 ---
 
@@ -63,7 +67,7 @@ Extract: date, type (Email/Note/Call), direction (inbound/outbound), subject, bo
 
 ### Full analysis output
 
-**For a DEAL:**
+**For a DEAL, output EXACTLY this structure and nothing else:**
 ```
 ## Deal: [Name]
 
@@ -86,7 +90,11 @@ Extract: date, type (Email/Note/Call), direction (inbound/outbound), subject, bo
 - [2-4 bullets: current pipeline status, blockers, next steps, anything notable]
 ```
 
-**For a CONTACT:**
+**Do NOT** include additional properties beyond those 9 fields listed above. Do NOT add supplementary tables (e.g. transaction volumes breakdown, utilization metrics). Do NOT add fields like credit product, customer tier, platform status, key account, JIRA key, onboarding status, or any other HubSpot properties not listed in the template.
+
+---
+
+**For a CONTACT, output EXACTLY this structure and nothing else:**
 ```
 ## Contact: [Name]
 
@@ -105,7 +113,11 @@ Extract: date, type (Email/Note/Call), direction (inbound/outbound), subject, bo
 - [2-4 bullets: relationship status, last contact, anything notable]
 ```
 
-**For a COMPANY:**
+**Do NOT** include additional properties beyond those 5 fields listed above. Do NOT add fields like lifecycle stage, lead status, company associations, social profiles, or any other HubSpot properties not listed in the template.
+
+---
+
+**For a COMPANY, output EXACTLY this structure and nothing else:**
 ```
 ## Company: [Name]
 
@@ -123,6 +135,8 @@ Extract: date, type (Email/Note/Call), direction (inbound/outbound), subject, bo
 ## Key Observations
 - [2-4 bullets: account status, engagement level, anything notable]
 ```
+
+**Do NOT** include additional properties beyond those 5 fields listed above. Do NOT add fields like industry, revenue, employee count, HubSpot score, lifecycle stage, or any other HubSpot properties not listed in the template.
 
 ---
 

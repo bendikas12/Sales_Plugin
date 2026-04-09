@@ -47,7 +47,7 @@ Use the appropriate HubSpot tool to retrieve the record:
 - **First, call `get_crm_objects` without specifying a properties list** — this returns all default properties and lets you see the full data model before filtering. Use this to verify field names actually exist and contain data before presenting results.
 - If you need to confirm whether a specific custom property exists, call `search_properties` with the objectType and a keyword.
 - For properties you do request by name, use the verified field names from the property reference below.
-- Resolve `hubspot_owner_id` using `search_owners` to show the owner's name, not just the ID. **Important:** To load the `search_owners` tool schema, use `ToolSearch` with the keyword query `search_owners` (do NOT use the `select:` prefix — the tool's full name includes an MCP server prefix that varies by environment, so hardcoding it will break). The keyword search will find the correct tool regardless of the server ID.
+- Resolve `hubspot_owner_id` using `search_owners` to show the owner's name, not just the ID. **Important:** To load the `search_owners` tool schema, use `ToolSearch` with the keyword query `owners` (not `search_owners`, which matches the wrong tool). Do NOT use the `select:` prefix with a hardcoded tool name — the tool's full name includes an MCP server prefix that varies by environment.
 
 ---
 

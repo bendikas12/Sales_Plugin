@@ -1,3 +1,7 @@
+## 0.4.1 - 2026-04-09
+- Fixed: moved glossary loading from CLAUDE.md rule to SessionStart hook, so the property glossary is injected into every session automatically (CLAUDE.md wasn't being read at session start)
+- Changed: reverted CLAUDE.md HubSpot property resolution section — no longer needed with hook approach
+
 ## 0.4.0 - 2026-04-09
 - Added: `references/hubspot-glossary.md` — shared property glossary with verified field names, types, and common aliases for deals, contacts, and companies
 - Added: CLAUDE.md rule to always consult the glossary before using `search_properties`, so ad-hoc HubSpot queries resolve correct field names without triggering a skill

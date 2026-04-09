@@ -1,3 +1,10 @@
 {
-  "hooks": {}
+  "hooks": {
+    "SessionStart": [
+      {
+        "command": "cat references/hubspot-glossary.md",
+        "description": "Load HubSpot property glossary into context so all sessions can resolve field names without triggering a skill"
+      }
+    ]
+  }
 }

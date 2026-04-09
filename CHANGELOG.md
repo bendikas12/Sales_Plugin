@@ -1,3 +1,7 @@
+## 0.4.2 - 2026-04-09
+- Fixed: corrected SessionStart hook JSON structure — added required `matcher` level and `type: "command"` field
+- Fixed: use `$CLAUDE_PROJECT_DIR` for glossary path so it resolves correctly regardless of working directory
+
 ## 0.4.1 - 2026-04-09
 - Fixed: moved glossary loading from CLAUDE.md rule to SessionStart hook, so the property glossary is injected into every session automatically (CLAUDE.md wasn't being read at session start)
 - Changed: reverted CLAUDE.md HubSpot property resolution section — no longer needed with hook approach

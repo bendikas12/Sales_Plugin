@@ -32,7 +32,7 @@ The user has invoked the HubSpot record skill. The argument (if provided) is: $A
 
 - **"Analyze", "overview", "tell me about", "review"** → run the full structured report (Step 4)
 - **Specific question** (e.g. "what's the expected transaction volume?", "who owns this?", "what stage is it in?", "what vertical is this?") → fetch only the relevant properties and answer directly, no full report needed
-- **"Recent communications", "last emails", "what was discussed"** → fetch Activity records only (Step 3) and summarize
+- **"Recent communications", "last emails", "what was discussed"** → fetch Email/Note/Call records separately (Step 4) and summarize
 
 ---
 
@@ -40,16 +40,22 @@ The user has invoked the HubSpot record skill. The argument (if provided) is: $A
 
 Use the appropriate HubSpot tool to retrieve the record:
 
-- Fetch **all important properties** for the object type (see property reference below)
+- **First, call `get_crm_objects` without specifying a properties list** — this returns all default properties and lets you see the full data model before filtering. Use this to verify field names actually exist and contain data before presenting results.
+- If you need to confirm whether a specific custom property exists, call `search_properties` with the objectType and a keyword.
+- For properties you do request by name, use the verified field names from the property reference below.
 - Resolve `hubspot_owner_id` using `search_owners` to show the owner's name, not just the ID
 
 ---
 
 ## Step 4 — Fetch recent communications (only for full analysis or when explicitly asked)
 
-Use `search_crm_objects` with objectType `Activity`, filtered by association to the record.
-- Sort by date descending, limit to last 10
-- Extract: date, activity type (email/call/note), direction (inbound/outbound), subject, body summary, sender/recipient
+**Do NOT use objectType `Activity`** — it returns a validation error. Instead, query each activity type separately:
+- `search_crm_objects` with objectType `Email`, filtered by association to the record
+- `search_crm_objects` with objectType `Note`, filtered by association to the record
+- `search_crm_objects` with objectType `Call`, filtered by association to the record
+
+Merge and sort all results by date descending, take the most recent 10 across all types.
+Extract: date, type (Email/Note/Call), direction (inbound/outbound), subject, body summary, sender/recipient.
 
 ---
 
@@ -65,8 +71,8 @@ Use `search_crm_objects` with objectType `Activity`, filtered by association to 
 |---|---|---|
 | Deal Stage | ... | [see stage meanings below] |
 | Pipeline | ... | Which sales pipeline |
-| Expected Transaction Volume | ... | Estimated revenue Pliant expects from this deal |
-| Total Addressable Transaction Volume | ... | Full potential spend this customer could bring |
+| Expected Monthly Transaction Volume | ... | Estimated monthly revenue Pliant expects from this deal |
+| Total Addressable Monthly Transaction Volume | ... | Full potential monthly spend this customer could bring |
 | Close Date | ... | Target date to close the deal |
 | Owner | ... | Pliant sales rep responsible |
 | Vertical | ... | Industry vertical of the customer |
@@ -127,10 +133,10 @@ Use `search_crm_objects` with objectType `Activity`, filtered by association to 
 | Property | HubSpot field name | What it means |
 |---|---|---|
 | Deal name | `dealname` | Name of the deal or opportunity |
-| Deal stage | `dealstage` | Current stage in Pliant's sales pipeline (see stages below) |
+| Deal stage (human-readable) | `name_of_deal_stage` | Current stage label in Pliant's sales pipeline (see stages below). Use this instead of `dealstage`, which returns an internal numeric ID. |
 | Pipeline | `pipeline` | Which pipeline this deal belongs to |
-| Expected transaction volume | `expected_transaction_volume` | Estimated revenue Pliant expects to generate from this deal |
-| Total addressable transaction volume | `total_addressable_transaction_volume` | Full potential spend this customer could bring to Pliant |
+| Expected monthly transaction volume | `expected_monthly_transaction_volume` | Estimated monthly revenue Pliant expects from this deal |
+| Total addressable monthly transaction volume | `total_addressable_monthly_transaction_volume` | Full potential monthly spend this customer could bring to Pliant |
 | Close date | `closedate` | Target date to close or activate the deal |
 | Owner | `hubspot_owner_id` | Pliant sales rep responsible for the deal |
 | Vertical | `vertical` | Industry vertical of the customer |

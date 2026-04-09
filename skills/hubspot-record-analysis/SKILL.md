@@ -79,8 +79,7 @@ Extract: date, type (Email/Note/Call), direction (inbound/outbound), subject, bo
 | Close Date | ... | Target date to close the deal |
 | Owner | ... | Pliant sales rep responsible |
 | Vertical | ... | Industry vertical of the customer |
-| Sub-Vertical | ... | More granular segment within the vertical |
-| Country/Region | ... | Customer's country or region |
+| Country | ... | Customer's country |
 
 ## Recent Communications
 [Last 10 activities: Date | Type | Direction | Subject | Summary]
@@ -154,7 +153,7 @@ Extract: date, type (Email/Note/Call), direction (inbound/outbound), subject, bo
 | Owner | `hubspot_owner_id` | Pliant sales rep responsible for the deal |
 | Vertical | `vertical` | Industry vertical of the customer |
 | Sub-Vertical | `sub_vertical` | More granular segment within the vertical |
-| Country/Region | `country_region` | Customer's country or region |
+| Country | `country` | Customer's country or region |
 
 ### Contact properties
 

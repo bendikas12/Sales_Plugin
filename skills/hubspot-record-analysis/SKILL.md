@@ -76,6 +76,10 @@ Extract: date, type (Email/Note/Call), direction (inbound/outbound), subject, bo
 | Pipeline | ... | Which sales pipeline |
 | Expected Monthly Transaction Volume | ... | Estimated monthly revenue Pliant expects from this deal |
 | Total Addressable Monthly Transaction Volume | ... | Full potential monthly spend this customer could bring |
+| Trx Volume (Last 0–30 Days) | ... | Transaction volume in the last 30 days |
+| Trx Volume (Last 31–60 Days) | ... | Transaction volume from 31 to 60 days ago |
+| Trx Volume (Last 61–90 Days) | ... | Transaction volume from 61 to 90 days ago |
+| Trx Volume (Last 0–180 Days) | ... | Transaction volume over the last 180 days |
 | Close Date | ... | Target date to close the deal |
 | Owner | ... | Pliant sales rep responsible |
 | Vertical | ... | Industry vertical of the customer |
@@ -88,7 +92,7 @@ Extract: date, type (Email/Note/Call), direction (inbound/outbound), subject, bo
 - [2-4 bullets: current pipeline status, blockers, next steps, anything notable]
 ```
 
-**Do NOT** include additional properties beyond those 9 fields listed above. Do NOT add supplementary tables (e.g. transaction volumes breakdown, utilization metrics). Do NOT add fields like credit product, customer tier, platform status, key account, JIRA key, onboarding status, or any other HubSpot properties not listed in the template.
+**Do NOT** include additional properties beyond those 12 fields listed above. Do NOT add supplementary tables (e.g. transaction volumes breakdown, utilization metrics). Do NOT add fields like credit product, customer tier, platform status, key account, JIRA key, onboarding status, or any other HubSpot properties not listed in the template.
 
 ---
 
@@ -149,6 +153,10 @@ Extract: date, type (Email/Note/Call), direction (inbound/outbound), subject, bo
 | Pipeline | `pipeline` | Which pipeline this deal belongs to |
 | Expected monthly transaction volume | `expected_monthly_transaction_volume` | Estimated monthly revenue Pliant expects from this deal |
 | Total addressable monthly transaction volume | `total_addressable_monthly_transaction_volume` | Full potential monthly spend this customer could bring to Pliant |
+| Trx volume (last 0–30 days) | `trx_vol_last_0_to_30_days` | Transaction volume in the last 30 days |
+| Trx volume (last 31–60 days) | `trx_vol_last_31_to_60_days` | Transaction volume from 31 to 60 days ago |
+| Trx volume (last 61–90 days) | `trx_vol_last_61_to_90_days` | Transaction volume from 61 to 90 days ago |
+| Trx volume (last 0–180 days) | `trx_vol_last_0_to_180_days` | Transaction volume over the last 180 days |
 | Close date | `closedate` | Target date to close or activate the deal |
 | Owner | `hubspot_owner_id` | Pliant sales rep responsible for the deal |
 | Vertical | `vertical` | Industry vertical of the customer |

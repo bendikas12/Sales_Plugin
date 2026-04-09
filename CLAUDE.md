@@ -22,8 +22,14 @@
   - MINOR (0.2.0): new skills, hooks, commands
   - MAJOR (1.0.0): breaking changes or major restructure
 
+## HubSpot property resolution
+- **Always** check `references/hubspot-glossary.md` before using the `search_properties` tool
+- The glossary contains verified field names, types, and common aliases for deals, contacts, and companies
+- Only fall back to `search_properties` for fields not listed in the glossary
+
 ## Plugin structure
 - Skills go in `skills/<skill-name>/SKILL.md`
 - Hooks go in `hooks/hooks.json`
 - Commands go in `commands/`
+- Shared references go in `references/`
 - Never put skills/hooks/commands inside `.claude-plugin/` — only `plugin.json` and `marketplace.json` go there

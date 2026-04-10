@@ -26,4 +26,5 @@
 - Skills go in `skills/<skill-name>/SKILL.md`
 - Hooks go in `hooks/hooks.json`
 - Commands go in `commands/`
+- Shared references go in `references/`
 - Never put skills/hooks/commands inside `.claude-plugin/` — only `plugin.json` and `marketplace.json` go there

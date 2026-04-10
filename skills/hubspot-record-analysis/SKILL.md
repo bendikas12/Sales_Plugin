@@ -1,10 +1,13 @@
 ---
-description: Work with any HubSpot record — deal, contact, or company. Executes based on what you ask: full analysis, a specific question, or recent communications. Accepts a name, ID, or HubSpot URL.
-argument-hint: [deal/contact/company name, ID, or HubSpot URL]
-allowed-tools: mcp__65af63f1-c198-41c6-a145-1c45ebb0e415__get_user_details mcp__65af63f1-c198-41c6-a145-1c45ebb0e415__search_crm_objects mcp__65af63f1-c198-41c6-a145-1c45ebb0e415__get_crm_objects mcp__65af63f1-c198-41c6-a145-1c45ebb0e415__search_properties mcp__65af63f1-c198-41c6-a145-1c45ebb0e415__get_properties mcp__65af63f1-c198-41c6-a145-1c45ebb0e415__search_owners
+description: "Work with any HubSpot record — deal, contact, or company. Executes based on what you ask: full analysis, a specific question, or recent communications. Accepts a name, ID, or HubSpot URL."
+argument-hint: "[deal/contact/company name, ID, or HubSpot URL]"
 ---
 
 The user has invoked the HubSpot record skill. The argument (if provided) is: $ARGUMENTS
+
+## Output rules — READ THIS FIRST
+
+You **MUST** follow the output structure defined in Step 5 **exactly**. Do not add extra fields, tables, columns, or sections beyond what is specified there. If the user wants additional detail, they will ask for it explicitly. This is a hard constraint, not a suggestion.
 
 ## Step 1 — Resolve the record
 
@@ -32,7 +35,7 @@ The user has invoked the HubSpot record skill. The argument (if provided) is: $A
 
 - **"Analyze", "overview", "tell me about", "review"** → run the full structured report (Step 4)
 - **Specific question** (e.g. "what's the expected transaction volume?", "who owns this?", "what stage is it in?", "what vertical is this?") → fetch only the relevant properties and answer directly, no full report needed
-- **"Recent communications", "last emails", "what was discussed"** → fetch Activity records only (Step 3) and summarize
+- **"Recent communications", "last emails", "what was discussed"** → fetch Email/Note/Call records separately (Step 4) and summarize
 
 ---
 
@@ -40,16 +43,22 @@ The user has invoked the HubSpot record skill. The argument (if provided) is: $A
 
 Use the appropriate HubSpot tool to retrieve the record:
 
-- Fetch **all important properties** for the object type (see property reference below)
-- Resolve `hubspot_owner_id` using `search_owners` to show the owner's name, not just the ID
+- **First, call `get_crm_objects` without specifying a properties list** — this returns all default properties and lets you see the full data model before filtering. Use this to verify field names actually exist and contain data before presenting results.
+- If you need to confirm whether a specific custom property exists, call `search_properties` with the objectType and a keyword.
+- For properties you do request by name, use the verified field names from the property reference below.
+- Resolve `hubspot_owner_id` using `search_owners` to show the owner's name, not just the ID. **Important:** To load the `search_owners` tool schema, use `ToolSearch` with the keyword query `owners` (not `search_owners`, which matches the wrong tool). Do NOT use the `select:` prefix with a hardcoded tool name — the tool's full name includes an MCP server prefix that varies by environment.
 
 ---
 
 ## Step 4 — Fetch recent communications (only for full analysis or when explicitly asked)
 
-Use `search_crm_objects` with objectType `Activity`, filtered by association to the record.
-- Sort by date descending, limit to last 10
-- Extract: date, activity type (email/call/note), direction (inbound/outbound), subject, body summary, sender/recipient
+**Do NOT use objectType `Activity`** — it returns a validation error. Instead, query each activity type separately:
+- `search_crm_objects` with objectType `Email`, filtered by association to the record
+- `search_crm_objects` with objectType `Note`, filtered by association to the record
+- `search_crm_objects` with objectType `Call`, filtered by association to the record
+
+Merge and sort all results by date descending, take the most recent 10 across all types.
+Extract: date, type (Email/Note/Call), direction (inbound/outbound), subject, body summary, sender/recipient.
 
 ---
 
@@ -57,7 +66,7 @@ Use `search_crm_objects` with objectType `Activity`, filtered by association to 
 
 ### Full analysis output
 
-**For a DEAL:**
+**For a DEAL, output EXACTLY this structure and nothing else:**
 ```
 ## Deal: [Name]
 
@@ -65,13 +74,16 @@ Use `search_crm_objects` with objectType `Activity`, filtered by association to 
 |---|---|---|
 | Deal Stage | ... | [see stage meanings below] |
 | Pipeline | ... | Which sales pipeline |
-| Expected Transaction Volume | ... | Estimated revenue Pliant expects from this deal |
-| Total Addressable Transaction Volume | ... | Full potential spend this customer could bring |
+| Expected Monthly Transaction Volume | ... | Estimated monthly revenue Pliant expects from this deal |
+| Total Addressable Monthly Transaction Volume | ... | Full potential monthly spend this customer could bring |
+| Trx Volume (Last 0–30 Days) | ... | Transaction volume in the last 30 days |
+| Trx Volume (Last 31–60 Days) | ... | Transaction volume from 31 to 60 days ago |
+| Trx Volume (Last 61–90 Days) | ... | Transaction volume from 61 to 90 days ago |
+| Trx Volume (Last 0–180 Days) | ... | Transaction volume over the last 180 days |
 | Close Date | ... | Target date to close the deal |
 | Owner | ... | Pliant sales rep responsible |
 | Vertical | ... | Industry vertical of the customer |
-| Sub-Vertical | ... | More granular segment within the vertical |
-| Country/Region | ... | Customer's country or region |
+| Country | ... | Customer's country |
 
 ## Recent Communications
 [Last 10 activities: Date | Type | Direction | Subject | Summary]
@@ -80,7 +92,11 @@ Use `search_crm_objects` with objectType `Activity`, filtered by association to 
 - [2-4 bullets: current pipeline status, blockers, next steps, anything notable]
 ```
 
-**For a CONTACT:**
+**Do NOT** include additional properties beyond those 12 fields listed above. Do NOT add supplementary tables (e.g. transaction volumes breakdown, utilization metrics). Do NOT add fields like credit product, customer tier, platform status, key account, JIRA key, onboarding status, or any other HubSpot properties not listed in the template.
+
+---
+
+**For a CONTACT, output EXACTLY this structure and nothing else:**
 ```
 ## Contact: [Name]
 
@@ -99,7 +115,11 @@ Use `search_crm_objects` with objectType `Activity`, filtered by association to 
 - [2-4 bullets: relationship status, last contact, anything notable]
 ```
 
-**For a COMPANY:**
+**Do NOT** include additional properties beyond those 5 fields listed above. Do NOT add fields like lifecycle stage, lead status, company associations, social profiles, or any other HubSpot properties not listed in the template.
+
+---
+
+**For a COMPANY, output EXACTLY this structure and nothing else:**
 ```
 ## Company: [Name]
 
@@ -118,6 +138,8 @@ Use `search_crm_objects` with objectType `Activity`, filtered by association to 
 - [2-4 bullets: account status, engagement level, anything notable]
 ```
 
+**Do NOT** include additional properties beyond those 5 fields listed above. Do NOT add fields like industry, revenue, employee count, HubSpot score, lifecycle stage, or any other HubSpot properties not listed in the template.
+
 ---
 
 ## Property reference
@@ -127,15 +149,19 @@ Use `search_crm_objects` with objectType `Activity`, filtered by association to 
 | Property | HubSpot field name | What it means |
 |---|---|---|
 | Deal name | `dealname` | Name of the deal or opportunity |
-| Deal stage | `dealstage` | Current stage in Pliant's sales pipeline (see stages below) |
+| Deal stage (human-readable) | `name_of_deal_stage` | Current stage label in Pliant's sales pipeline (see stages below). Use this instead of `dealstage`, which returns an internal numeric ID. |
 | Pipeline | `pipeline` | Which pipeline this deal belongs to |
-| Expected transaction volume | `expected_transaction_volume` | Estimated revenue Pliant expects to generate from this deal |
-| Total addressable transaction volume | `total_addressable_transaction_volume` | Full potential spend this customer could bring to Pliant |
+| Expected monthly transaction volume | `expected_monthly_transaction_volume` | Estimated monthly revenue Pliant expects from this deal |
+| Total addressable monthly transaction volume | `total_addressable_monthly_transaction_volume` | Full potential monthly spend this customer could bring to Pliant |
+| Trx volume (last 0–30 days) | `trx_vol_last_0_to_30_days` | Transaction volume in the last 30 days |
+| Trx volume (last 31–60 days) | `trx_vol_last_31_to_60_days` | Transaction volume from 31 to 60 days ago |
+| Trx volume (last 61–90 days) | `trx_vol_last_61_to_90_days` | Transaction volume from 61 to 90 days ago |
+| Trx volume (last 0–180 days) | `trx_vol_last_0_to_180_days` | Transaction volume over the last 180 days |
 | Close date | `closedate` | Target date to close or activate the deal |
 | Owner | `hubspot_owner_id` | Pliant sales rep responsible for the deal |
 | Vertical | `vertical` | Industry vertical of the customer |
 | Sub-Vertical | `sub_vertical` | More granular segment within the vertical |
-| Country/Region | `country_region` | Customer's country or region |
+| Country | `country` | Customer's country or region |
 
 ### Contact properties
 

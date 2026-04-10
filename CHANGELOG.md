@@ -1,3 +1,5 @@
+## 0.3.0 - 2026-04-10
+- Added: email-followup skill — drafts post-meeting follow-up emails using Fireflies transcript + HubSpot context, with Gmail draft push
 ## 0.4.4 - 2026-04-09
 - Added: pipeline ID lookup table to glossary — maps all 6 pipeline IDs to human-readable names (Pre-Sales Pipeline, Sales Pipeline, Referrer, Partner Team, Banking, Insurance)
 - Fixed: marked `pipeline` field type as `enumeration` with note that it returns an ID

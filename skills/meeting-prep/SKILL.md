@@ -1,7 +1,7 @@
 ---
 description: "Generate a meeting prep brief in minutes — company snapshot, contact intel, tailored discovery questions, pain points, and an opening insight. Uses web research + HubSpot context."
 argument-hint: "[contact name] at [company name]"
-allowed-tools: WebSearch WebFetch mcp__65af63f1-c198-41c6-a145-1c45ebb0e415__search_crm_objects mcp__65af63f1-c198-41c6-a145-1c45ebb0e415__get_crm_objects mcp__65af63f1-c198-41c6-a145-1c45ebb0e415__search_owners
+allowed-tools: mcp__65af63f1-c198-41c6-a145-1c45ebb0e415__search_crm_objects mcp__65af63f1-c198-41c6-a145-1c45ebb0e415__get_crm_objects mcp__65af63f1-c198-41c6-a145-1c45ebb0e415__search_owners
 ---
 
 The user has invoked the meeting prep skill. The argument (if provided) is: $ARGUMENTS

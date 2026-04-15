@@ -1,3 +1,6 @@
+## 0.5.0 - 2026-04-15
+- Added: meeting-prep skill — generates a full meeting preparation brief with company snapshot, contact intel, discovery questions, pain points, and opening insight using web research + HubSpot context
+
 ## 0.3.0 - 2026-04-10
 - Added: email-followup skill — drafts post-meeting follow-up emails using Fireflies transcript + HubSpot context, with Gmail draft push
 ## 0.4.4 - 2026-04-09

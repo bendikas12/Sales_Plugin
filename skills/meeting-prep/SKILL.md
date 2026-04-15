@@ -52,7 +52,7 @@ Search HubSpot for any existing records related to this company and contact.
 
 **Search for the Company:**
 - Use `search_crm_objects` with `objectType: "Organization"` and query on the company name
-- If found: fetch `name`, `domain`, `vertical`, `sub_vertical`, `country_region`, `hubspot_owner_id`
+- If found: fetch `name`, `domain`, `vertical`, `sub_vertical`, `country_region`, `hubspot_owner_id`, `notes_last_updated`
 - Resolve owner name via `search_owners`
 
 **Search for a Deal:**
@@ -154,7 +154,22 @@ Based on [mention the source: deal context / industry research / meeting context
 > "[One specific, impressive talking point that shows you did your homework — reference a recent company event, a metric, a market trend relevant to them, or something from the contact's background.]"
 
 **Why this works:** [1 sentence explaining why this opener builds credibility]
+
+---
+
+## 6. CRM Context
+
+| Field | Value | Source |
+|---|---|---|
+| Vertical | [vertical] | Company |
+| Sub-Vertical | [sub_vertical] | Company |
+| Country | [country_region] | Company |
+| Deal | [dealname] — [deal stage] | Deal |
+| Last Activity | [notes_last_updated] | Company |
+| Owner | [resolved owner name from hubspot_owner_id] | Company |
 ```
+
+**Section 6 is conditional:** Only include it if Step 3 found an active deal (not Closed lost or Churned). If no active deal exists, omit Section 6 entirely from the output — do not show an empty table or a placeholder.
 
 ---
 

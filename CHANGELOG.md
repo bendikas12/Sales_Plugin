@@ -1,3 +1,6 @@
+## 0.6.0 - 2026-04-20
+- Added: email-followup-v2 skill — parallel v2 of email-followup for A/B comparison. Adds multi-meeting synthesis (up to 3 transcripts, chronological), prior Gmail thread awareness, cost-bounded HubSpot engagement memo, email-based contact lookup, multi-recipient To/CC, structured-only action items (no inference), Calendly placeholder token, rep voice sampling from last 5 sent emails, Fireflies-based language detection. Renders email in Claude instead of pushing to Gmail.
+
 ## 0.5.0 - 2026-04-15
 - Added: meeting-prep skill — generates a full meeting preparation brief with company snapshot, contact intel, discovery questions, pain points, and opening insight using web research + HubSpot context
 

@@ -1,3 +1,7 @@
+## 0.10.0 - 2026-04-21
+- Changed: renamed `pliant-brand-guidelines` skill to `pliant-design` (directory + SKILL.md `name` frontmatter). Auto-invocation description updated to match.
+- Added: shape & corners section to `pliant-design` — Pliant visuals use rounded corners, never sharp. Documents a radius scale (chips 6px, buttons/inputs 10px, cards/tables 16px, hero/modals 24px, pills 9999px, images 12–16px), nesting rules (children ≤ parent), and a hard "no 0px corners on branded surfaces" rule. Per-artifact guidance now specifies radii for HTML, `MSO_SHAPE.ROUNDED_RECTANGLE` with adjustments ~0.1/~0.15 for PPTX, and `roundRect` preset geometry for DOCX shapes.
+
 ## 0.9.0 - 2026-04-21
 - Added: `pliant-brand-guidelines` skill with Pliant's official color palette (primaries, secondaries, tints, neutrals), typography rules (Pangea headlines, Maison Neue body), text-color contrast rules, and application guidance for HTML / PPTX / DOCX outputs. Auto-invoked whenever the user asks for Pliant branding, corporate identity, brand colors, or visual identity on any artifact.
 

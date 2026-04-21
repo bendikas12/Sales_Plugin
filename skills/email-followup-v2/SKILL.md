@@ -110,7 +110,7 @@ Write a follow-up email using the data gathered in Steps 1–5.
 2. **Summary** — 2–3 bullets recapping what was discussed (synthesize across transcripts if multiple). Draw on the engagement-history memo (Step 3) for relevant prior context.
 3. **Next steps** — use **only** the structured `action_items` from Fireflies. If none exist, write: `- No action items captured — add manually.`  **Do not infer action items from transcript prose.**
 4. **CTA** — one specific ask. If the CTA proposes a meeting, insert the literal token `[INSERT CALENDLY LINK]` in the body where the link belongs.
-5. **Sign-off** — use the rep's sign-off phrase from their voice profile (Step 5), followed by the **rep identity captured in Step 5** (the authenticated Gmail user — never the HubSpot owner). Fall back to `[Your name]` only if Step 5 couldn't determine an identity.
+5. **Sign-off** — use the rep's sign-off from their voice profile, followed by the rep's name who is asking for this (not HubSpot owner). Fall back to `[Your name]` if neither is available.
 
 **Subject line:** `Follow-up: [Company or Contact Name] — [Most recent meeting date]`
 - If no company/contact name is available, use the raw `$ARGUMENTS` value.

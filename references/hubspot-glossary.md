@@ -57,6 +57,18 @@ The `pipeline` field returns a numeric ID. Use this table to resolve it to a nam
 | `25225019` | Banking |
 | `1928248520` | Insurance |
 
+## Deal stage ID lookup
+
+The `dealstage` field returns an internal ID. Prefer filtering on these IDs rather than `name_of_deal_stage` labels — IDs are stable across label renames and localisations.
+
+| Stage label | `dealstage` ID |
+|---|---|
+| Account activated | `16177379` |
+| Closed Lost | `16258181` |
+| Churned | `30637484` |
+
+Additional stage IDs can be added here as other skills need them.
+
 ## Deal stage meanings
 
 | Stage | What it means |

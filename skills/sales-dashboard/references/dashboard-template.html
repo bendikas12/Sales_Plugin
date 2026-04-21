@@ -83,6 +83,15 @@
   .warn { color: var(--warn); }
   .bad { color: var(--bad); }
   .ok { color: var(--ok); }
+  .chart-card {
+    padding: 20px 24px 16px;
+    margin-top: 4px;
+  }
+  .chart-card .canvas-wrap {
+    position: relative;
+    height: 280px;
+    margin-top: 4px;
+  }
   footer {
     margin-top: 32px;
     color: var(--muted);
@@ -158,8 +167,68 @@
     </div>
   </div>
 
+  <div class="section-title">Pipeline by stage</div>
+  <div class="card chart-card">
+    <div class="label">Total addressable volume by deal stage</div>
+    <div class="canvas-wrap"><canvas id="pipelineByStage"></canvas></div>
+    <div class="sub">Sum of total_addressable_monthly_transaction_volume per stage, ordered by funnel position (excludes Account activated, Churned, Closed Lost)</div>
+  </div>
+
   <footer>
     Generated {{GENERATED_AT}} · Sales Plugin · Rep: {{REP_EMAIL}}
   </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script>
+    const stageData = {{PIPELINE_STAGE_DATA_JSON}};
+    const fmtEUR = v => '€' + Math.round(v).toLocaleString('en-US');
+    const fmtAxis = v => v >= 1_000_000 ? '€' + (v / 1_000_000).toFixed(1) + 'M'
+                       : v >= 1_000     ? '€' + Math.round(v / 1_000) + 'k'
+                       : '€' + v;
+    const canvas = document.getElementById('pipelineByStage');
+    if (canvas && window.Chart && Array.isArray(stageData) && stageData.length) {
+      new Chart(canvas.getContext('2d'), {
+        type: 'bar',
+        data: {
+          labels: stageData.map(d => d.stage),
+          datasets: [{
+            label: 'TAM',
+            data: stageData.map(d => d.tam),
+            backgroundColor: '#6ea8ff',
+            borderRadius: 4,
+            maxBarThickness: 56,
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: ctx => fmtEUR(ctx.parsed.y)
+              },
+              backgroundColor: '#1e2030',
+              borderColor: '#2a2d3d',
+              borderWidth: 1,
+              titleColor: '#e8e9ee',
+              bodyColor: '#e8e9ee',
+            }
+          },
+          scales: {
+            x: {
+              ticks: { color: '#8b8fa3', autoSkip: false, maxRotation: 30, minRotation: 0 },
+              grid: { color: 'transparent' }
+            },
+            y: {
+              beginAtZero: true,
+              ticks: { color: '#8b8fa3', callback: fmtAxis },
+              grid: { color: '#2a2d3d' }
+            }
+          }
+        }
+      });
+    }
+  </script>
 </body>
 </html>

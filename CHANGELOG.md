@@ -1,3 +1,8 @@
+## 0.8.0 - 2026-04-21
+- Added: sales-dashboard now renders a bar chart of total addressable volume by deal stage, below the existing pipeline cards. Y axis is summed `total_addressable_monthly_transaction_volume`, X axis is deal stages in canonical funnel order (Solution Qualification → Pre-Onboarding → Submitted to credit → Info requested → Info partially obtained → Info fully obtained → Submitted to partner bank). Unknown / newly-added stages are appended sorted so nothing is silently dropped. Chart is Chart.js 4.4.1 via CDN, matches the dashboard's dark theme. Data is computed programmatically from the same paginated deal set used for TAM — no manual transcription.
+- Added: new `{{PIPELINE_STAGE_DATA_JSON}}` template token, inlined verbatim as a JS literal in the template's `<script>` block.
+- Changed: sales-pipeline deal fetch now also requests `name_of_deal_stage` (needed for chart labels — `dealstage` IDs are for filtering, labels are for display).
+
 ## 0.7.3 - 2026-04-21
 - Changed: sales-dashboard default output path is now `${HOME}/Desktop/Claude/Dashboard/sales-dashboard.html` so reps can bookmark the file once and reopen it every morning for fresh numbers. Skill runs `mkdir -p` on the parent directory before writing so the `Claude/Dashboard/` folders are created automatically on first run. `$ARGUMENTS` path override still works.
 

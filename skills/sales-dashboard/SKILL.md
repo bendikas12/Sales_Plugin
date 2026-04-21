@@ -8,7 +8,7 @@ The user has invoked the sales dashboard skill. The argument (if provided) is: $
 ## Output rules — READ THIS FIRST
 
 - The dashboard HTML structure is **fixed**. Use `${CLAUDE_PLUGIN_ROOT}/skills/sales-dashboard/references/dashboard-template.html` verbatim and only substitute the `{{TOKEN}}` placeholders. Do not add, remove, or reorder tiles. If a metric can't be fetched, render `N/A` for that token — never invent a number and never restructure the template.
-- Each run **overwrites** the same output file so a daily schedule produces a stable artifact. Default output path: `${HOME}/sales-dashboard.html`. If `$ARGUMENTS` looks like a path (starts with `/`, `~`, or `./`), use that instead.
+- Each run **overwrites** the same output file so the rep can bookmark it once and reopen it every morning to see fresh numbers. **Default output path: `${HOME}/Desktop/Claude/Dashboard/sales-dashboard.html`.** If `$ARGUMENTS` looks like a path (starts with `/`, `~`, or `./`), use that instead. Before writing, ensure the parent directory exists — run `mkdir -p "$(dirname "<output-path>")"` via Bash so the `Claude/Dashboard/` folders are created automatically on first run. Never change the filename between runs; the stable bookmark depends on it.
 - After writing the file, also print a plain-text summary of the same numbers to chat so the rep sees results without opening the file.
 - This skill is personalised to the invoker. All metrics are scoped to **the person running the skill** — never aggregate across the team.
 
@@ -88,7 +88,7 @@ Use `search_crm_objects` with `objectType: "Object"` (deal). **All filters ANDed
 - `hubspot_owner_id` EQ `REP.hubspot_owner_id`
 - `pipeline` EQ `"16177355"` (Sales Pipeline — see `${CLAUDE_PLUGIN_ROOT}/references/hubspot-glossary.md`)
 - `dealstage` NOT IN (`"16177379"`, `"16258181"`, `"30637484"`) — these are **Account activated**, **Closed Lost**, **Churned** respectively. Filter on the numeric `dealstage` ID, not on the `name_of_deal_stage` text label: IDs are stable across label renames and localisations. These IDs are hardcoded here on purpose — do not attempt to look them up or guess them.
-- Request properties: `dealname`, `dealstage`, `total_addressable_monthly_transaction_volume`
+- Request properties: `dealname`, `dealstage`, `name_of_deal_stage`, `total_addressable_monthly_transaction_volume` (the label is needed to render the by-stage chart — IDs are for filtering, labels are for display)
 - Set `limit: 100` and paginate using the `after` cursor until every page is fetched. After the first response, note `total`; after the loop, assert `len(all_deals) == total` before summing. If the assertion fails, re-fetch once; if it still fails, render `PIPELINE_DEALS` and `TAM_VOLUME` as `N/A` and note the reason in the chat summary.
 
 **Sum `TAM_VOLUME` programmatically — never by hand.** After all pages are concatenated into a single JSON array of deal objects, pipe that array into a Python one-liner and use its stdout verbatim. Do **not** read individual property values into your own reasoning and add them up — that's how we got a wrong total last time.
@@ -108,6 +108,44 @@ Then:
 - `PIPELINE_DEALS` = length of the concatenated deals list (same as `total` from the first page).
 - `TAM_VOLUME` = the integer printed by the script above, formatted with the rep's currency if known (else EUR) and thousand separators, e.g. `€1,245,000`. Null / missing values are treated as 0 by the script — don't warn, some deals legitimately have no TAM yet.
 
+**Also compute `PIPELINE_STAGE_DATA_JSON` — the data for the by-stage chart.** Same rule: do it programmatically, don't hand-pick. Pipe the same concatenated deals JSON through this script and use its stdout verbatim:
+
+```bash
+python3 -c '
+import json, sys
+from collections import defaultdict
+
+# Canonical funnel order for the Sales Pipeline. Stages not in this list
+# (newly-added HubSpot stages, renames) are appended after these, sorted
+# alphabetically, so nothing is silently dropped.
+STAGE_ORDER = [
+    "Solution Qualification / Demo conducted",
+    "Pre-Onboarding",
+    "Submitted to credit",
+    "Info requested",
+    "Info partially obtained",
+    "Info fully obtained",
+    "Submitted to partner bank",
+]
+
+deals = json.load(sys.stdin)
+by_stage = defaultdict(float)
+for d in deals:
+    props = d.get("properties", {}) or {}
+    stage = props.get("name_of_deal_stage") or "Unknown"
+    tam = float(props.get("total_addressable_monthly_transaction_volume") or 0)
+    by_stage[stage] += tam
+
+known = [(s, by_stage[s]) for s in STAGE_ORDER if s in by_stage]
+unknown = sorted((s, v) for s, v in by_stage.items() if s not in STAGE_ORDER)
+ordered = known + unknown
+
+print(json.dumps([{"stage": s, "tam": int(v)} for s, v in ordered]))
+' <<< "$DEALS_JSON"
+```
+
+`PIPELINE_STAGE_DATA_JSON` is the raw JSON array printed by the script (e.g. `[{"stage":"Solution Qualification / Demo conducted","tam":120000}, ...]`). It's inlined **verbatim** into the template's `<script>` block as a JS literal — do not wrap it in quotes, do not pretty-print, do not hand-edit the labels. If there are zero deals, the script prints `[]`; the template's chart init checks for this and silently no-ops, which is the correct behaviour.
+
 ---
 
 ## Step 4 — Render the dashboard
@@ -123,7 +161,8 @@ Then:
    - `{{UNREAD_EMAILS}}`
    - `{{MEETINGS_TODAY}}`, `{{CUSTOMER_FACING_MEETINGS}}`
    - `{{PIPELINE_DEALS}}`, `{{TAM_VOLUME}}`
-3. Write the result to the resolved output path (Step 0 default or `$ARGUMENTS`). Use the Write tool — it overwrites existing files by design, which is what the daily schedule relies on.
+   - `{{PIPELINE_STAGE_DATA_JSON}}` — raw JSON array, inlined as a JS literal (no surrounding quotes)
+3. Ensure the parent directory exists: `mkdir -p "$(dirname "<output-path>")"`. Then write the result to the resolved output path (default `${HOME}/Desktop/Claude/Dashboard/sales-dashboard.html`, or `$ARGUMENTS` if it's a path). Use the Write tool — it overwrites existing files by design, which is what the rep's bookmark relies on.
 
 ---
 

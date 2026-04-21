@@ -1,3 +1,7 @@
+## 0.6.2 - 2026-04-21
+- Fixed: synced `marketplace.json` version with `plugin.json` — both now at 0.6.2. Without this, Claude Code clients read the stale marketplace version and never pick up new plugin updates.
+- Changed: CLAUDE.md Versioning section now requires bumping both `plugin.json` and `marketplace.json` in lockstep for every change set.
+
 ## 0.6.1 - 2026-04-21
 - Fixed: email-followup-v2 sign-off now uses the authenticated Gmail user (the person running the skill), not the HubSpot deal/contact owner. Step 5 now also captures rep identity, with fallbacks: Gmail profile → From-header display name on sent mail → title-cased local-part → `[Your name]`. "Signing as" line added to the rendered context summary.
 

@@ -12,6 +12,7 @@
 
 ## Versioning
 - Bump `version` in `.claude-plugin/plugin.json` with every change set
+- **Also bump the matching `version` in `.claude-plugin/marketplace.json` (inside the `sales-plugin` entry) to the same value** — Claude Code resolves plugin updates from the marketplace entry, so if this isn't bumped, clients won't pick up the new version
 - Update `CHANGELOG.md` at the same time, using the format:
   ```
   ## x.x.x - YYYY-MM-DD

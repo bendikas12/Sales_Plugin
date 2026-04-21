@@ -21,7 +21,7 @@ These three colors form the foundation of Pliant's visual identity.
 | Name | HEX | RGB | Usage |
 |------|-----|-----|-------|
 | Pliant Yellow | `#e6ff52` | 230, 255, 82 | Lead brand color. Use sparingly — logos, key highlights, focal moments. **Never use for text.** |
-| Pliant Black | `#201c1c` | 32, 28, 28 | Primary text color, logos. Background only on swag (tote bags, t-shirts). |
+| Pliant Black | `#201c1c` | 32, 28, 28 | Primary text color, logos, and small element fills (icons, borders, rules). **Never a background.** |
 | White | `#ffffff` | 255, 255, 255 | Primary background. Generous white space is an important part of the brand. |
 
 ### Secondary Colors
@@ -69,7 +69,8 @@ The reason these rules exist is to keep Pliant's brand feeling clean, bright, an
 - Don't combine more than two accent colors together.
 - Don't create compositions using only neutral shades — include at least one brand color.
 - Don't use colors outside the official palette.
-- **For CaaS / technical assets**: Use Dark Charcoal (`#19242a`) as the main background to convey technology and professionalism. All other brand colors remain usable and should be complemented with the Charcoal tone.
+- **Backgrounds are never dark.** White is the default background; light neutrals (Pliant Gray 1 / Gray 2) are the only other acceptable large-surface fills. Pliant Black, Dark Charcoal, Pliant Gray (`#404c52`), and the Dark tint column are **element colors only** — use them for text, icons, borders, small shapes, chart strokes, small chips, or compact badges, not for page/section/slide/card backgrounds.
+- **For CaaS / technical assets**: convey technology and professionalism through **dark elements on light backgrounds** — e.g., Dark Charcoal headlines, icons, rules, and small accent chips against white or Pliant Gray 1. Do not flip the composition to a dark canvas.
 
 ## Typography
 
@@ -95,17 +96,17 @@ These rules ensure readability and visual consistency across all Pliant material
 
 ### Text Color Rules
 
-These exist because Pliant Yellow is eye-catching but low-contrast — it shouldn't be used as a text color.
+These exist because Pliant Yellow is eye-catching but low-contrast — it shouldn't be used as a text color. Backgrounds in Pliant are always light, so every row below starts from a light surface.
 
 | Background | Text Color |
 |------------|------------|
 | White | Pliant Black (`#201c1c`) |
-| Black | White (`#ffffff`) |
-| Bright colors (Yellow, Orange, Red, Blue, Fawn) | Pliant Black (`#201c1c`) |
-| Dark colors (Dark Charcoal, Pliant Gray) | White (`#ffffff`) |
-| Light Grays | Pliant Black (`#201c1c`) |
+| Light Grays (Gray 1, Gray 2) | Pliant Black (`#201c1c`) |
+| Bright colors used as element fills (Yellow, Orange, Red, Blue, Fawn) | Pliant Black (`#201c1c`) |
 
-**Never** use white text on bright colors. **Never** use black text on dark colors. **Never** use Pliant Yellow as a text color.
+For dark **elements** (Pliant Black, Dark Charcoal, Pliant Gray, Dark tints) used as small shapes, chips, or icon fills sitting on a light page, use White (`#ffffff`) for any text or glyph placed inside them.
+
+**Never** use a dark background for page, section, slide, or card surfaces. **Never** use white text on bright colors. **Never** use black text on dark element fills. **Never** use Pliant Yellow as a text color.
 
 ## Shape & Corners
 
@@ -142,7 +143,8 @@ When creating branded outputs, apply the guidelines as follows:
 - Use Pangea for headings, Maison Neue for body text (with Arial/Helvetica fallbacks)
 - Use Pliant Yellow sparingly for highlights, CTAs, or accent elements — not for large backgrounds
 - Use secondary colors for cards, tags, and visual variety
-- For dark/tech sections, use Dark Charcoal background with white text
+- **Never set a dark `background-color` on `body`, sections, hero blocks, cards, or modals.** Dark Charcoal / Pliant Black / Pliant Gray are reserved for elements: text, icons, borders, chart strokes, small badges, and compact chips sitting on a light surface
+- For a "tech" feel, keep the page light (white or Gray 1) and lean on Dark Charcoal headlines, thin rules, and monochrome icons rather than inverting to a dark canvas
 - **Rounded corners everywhere**: buttons `border-radius: 10px`, cards/tables/panels `16px`, hero blocks/modals `24px`, chips/tags `6px`, status pills `9999px`. Images and chart containers `12–16px`. Never ship sharp 0px corners on branded surfaces.
 
 ### Presentations (PPTX)
@@ -150,7 +152,7 @@ When creating branded outputs, apply the guidelines as follows:
 - Headings (24pt+): Pangea font
 - Body text: Maison Neue font
 - Title slides can use Pliant Yellow as an accent stripe or highlight
-- Content slides: white background, black text, accent colors for shapes
+- **All slide backgrounds are white** (or Pliant Gray 1 for occasional variation). Never fill a slide background with Pliant Black, Dark Charcoal, Pliant Gray, or any Dark tint — those are for text, icons, small shapes, and accent elements on top of the light slide
 - **Use rounded shapes**: prefer `MSO_SHAPE.ROUNDED_RECTANGLE` over `RECTANGLE` for every shape, callout, and image frame. After inserting, set `shape.adjustments[0]` to ~0.1 for standard content shapes and ~0.15 for hero/title shapes so the radius matches the web scale.
 
 ### Documents (DOCX)
@@ -166,3 +168,4 @@ When creating branded outputs, apply the guidelines as follows:
 - Yellow = focal point, not filler
 - Keep compositions clean with max two bright colors + neutrals
 - Soft, rounded corners on every surface — sharp rectangles break the brand feel
+- Backgrounds stay light (White or Pliant Gray 1/2). Black and the Dark palette are element colors — text, icons, borders, small shapes — never the canvas

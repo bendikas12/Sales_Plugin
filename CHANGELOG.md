@@ -1,3 +1,9 @@
+## 0.10.1 - 2026-04-21
+- Changed: `pliant-design` now forbids dark backgrounds entirely. Pliant Black, Dark Charcoal, Pliant Gray (`#404c52`), and the Dark tint column are reclassified as element colors (text, icons, borders, small shapes, chips) — never backgrounds for pages, sections, slides, cards, or modals. Backgrounds are restricted to White or light neutrals (Pliant Gray 1 / Gray 2).
+- Changed: removed the CaaS "Dark Charcoal as main background" guidance. Tech feel is now achieved via dark elements on light surfaces, not an inverted canvas.
+- Changed: Text Color Rules table dropped the Black / Dark-background rows and now documents text-on-dark only for dark *elements* (chips/icons/shapes) sitting on a light page. Per-artifact HTML/PPTX sections explicitly prohibit setting dark `background-color` / slide fills.
+- Changed: Pliant Black usage in the Primary Colors table is now "text, logos, small element fills — never a background" (the swag-background exception is removed).
+
 ## 0.10.0 - 2026-04-21
 - Changed: renamed `pliant-brand-guidelines` skill to `pliant-design` (directory + SKILL.md `name` frontmatter). Auto-invocation description updated to match.
 - Added: shape & corners section to `pliant-design` — Pliant visuals use rounded corners, never sharp. Documents a radius scale (chips 6px, buttons/inputs 10px, cards/tables 16px, hero/modals 24px, pills 9999px, images 12–16px), nesting rules (children ≤ parent), and a hard "no 0px corners on branded surfaces" rule. Per-artifact guidance now specifies radii for HTML, `MSO_SHAPE.ROUNDED_RECTANGLE` with adjustments ~0.1/~0.15 for PPTX, and `roundRect` preset geometry for DOCX shapes.

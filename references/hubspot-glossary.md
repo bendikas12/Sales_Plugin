@@ -73,6 +73,7 @@ Additional stage IDs can be added here as other skills need them.
 
 | Stage | What it means |
 |---|---|
+| Discovery / Demo Scheduled | Demo call is scheduled
 | Solution Qualification / Demo conducted | Customer landed in CRM, initial demo done. Early qualification. |
 | Pre-Onboarding | Platform registration underway. Account created — waiting on customer. |
 | Submitted to credit | Info provided. Pliant Compliance started credit assessment. |

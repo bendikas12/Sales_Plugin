@@ -8,14 +8,13 @@ The user has invoked the sales dashboard skill. The argument (if provided) is: $
 ## Output rules — READ THIS FIRST
 
 - The dashboard HTML structure is **fixed**. Use `${CLAUDE_PLUGIN_ROOT}/skills/sales-dashboard/references/dashboard-template.html` verbatim and only substitute the `{{TOKEN}}` placeholders. Do not add, remove, or reorder tiles. If a metric can't be fetched, render `N/A` for that token — never invent a number and never restructure the template.
-- Each run **overwrites** the same output file so the rep can bookmark it once and reopen it every morning to see fresh numbers. **Resolve the output path via bash first** — the Write tool does not expand shell variables, so you must convert `$HOME` / `~` to a concrete absolute path before calling it:
+- Each run **overwrites** the same output file so the rep can bookmark it once and reopen it every morning to see fresh numbers. **Resolve the output path via a single Bash call, then pass the printed absolute path to the Write tool.** The Write tool does not expand `$HOME`, `${HOME}`, or `~` — it takes a literal path string, so you must resolve it first:
   ```bash
-  OUTPUT="${ARGUMENTS:-$HOME/Desktop/Claude/Dashboard/sales-dashboard.html}"
-  OUTPUT="$(eval echo "$OUTPUT")"   # expands ~ and $VARs if $ARGUMENTS contained them
-  mkdir -p "$(dirname "$OUTPUT")"
-  echo "$OUTPUT"
+  P="$HOME/Desktop/Claude/Dashboard/sales-dashboard.html"
+  mkdir -p "$(dirname "$P")"
+  printf '%s' "$P"
   ```
-  Use the `echo`ed absolute path (e.g. `/Users/jane/Desktop/Claude/Dashboard/sales-dashboard.html`) as the `file_path` argument to the Write tool. **Never pass `${HOME}`, `$HOME`, or `~` literally to Write.** Never change the filename between runs; the stable bookmark depends on it.
+  Run this one Bash call, capture stdout (something like `/Users/jane/Desktop/Claude/Dashboard/sales-dashboard.html`), and use that literal string as the `file_path` argument to Write. If the user passed a path in `$ARGUMENTS` (starts with `/`, `~`, or `./`), replace the first line with `P="<that argument>"` and run the same three lines. Never change the filename between runs; the stable bookmark depends on it.
 - After writing the file, also print a plain-text summary of the same numbers to chat so the rep sees results without opening the file.
 - This skill is personalised to the invoker. All metrics are scoped to **the person running the skill** — never aggregate across the team.
 
@@ -146,7 +145,10 @@ for d in deals:
     tam = float(props.get("total_addressable_monthly_transaction_volume") or 0)
     by_stage[stage] += tam
 
-known = [(s, by_stage[s]) for s in STAGE_ORDER if s in by_stage]
+# Emit EVERY canonical stage, with 0 if no deals land there — the rep
+# needs to see the empty stages in the chart so the funnel shape is
+# obvious. Unknown stages (renames / newly-added) are appended sorted.
+known = [(s, by_stage.get(s, 0.0)) for s in STAGE_ORDER]
 unknown = sorted((s, v) for s, v in by_stage.items() if s not in STAGE_ORDER)
 ordered = known + unknown
 
@@ -154,7 +156,7 @@ print(json.dumps([{"stage": s, "tam": int(v)} for s, v in ordered]))
 ' <<< "$DEALS_JSON"
 ```
 
-`PIPELINE_STAGE_DATA_JSON` is the raw JSON array printed by the script (e.g. `[{"stage":"Solution Qualification / Demo conducted","tam":120000}, ...]`). It's inlined **verbatim** into the template's `<script>` block as a JS literal — do not wrap it in quotes, do not pretty-print, do not hand-edit the labels. If there are zero deals, the script prints `[]`; the template's chart init checks for this and silently no-ops, which is the correct behaviour.
+`PIPELINE_STAGE_DATA_JSON` is the raw JSON array printed by the script (e.g. `[{"stage":"Discovery / Demo Scheduled","tam":0},{"stage":"Solution Qualification / Demo conducted","tam":120000}, ...]`). It's inlined **verbatim** into the template's `<script>` block as a JS literal — do not wrap it in quotes, do not pretty-print, do not hand-edit the labels. The script always emits every canonical stage, so an empty pipeline still renders all 10 stage labels on the X axis at height 0 — the rep needs to see the full funnel shape even when stages are empty.
 
 ---
 

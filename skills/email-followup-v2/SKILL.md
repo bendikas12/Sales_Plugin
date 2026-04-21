@@ -11,6 +11,26 @@ The user has invoked the email follow-up v2 skill. The argument (if provided) is
 
 ---
 
+## PREREQUISITE — Identify the sender (who is running this skill)
+
+**Do this BEFORE fetching any Fireflies or HubSpot data**, so meeting-host names and deal-owner names cannot contaminate the identity. Resolve the sender's name + email and store it as `SENDER` — this is the person who will sign the draft in Step 6.
+
+Priority (stop at the first that succeeds):
+1. The authenticated Gmail user's profile (use the Gmail MCP's profile / `get_me` call if available) → take `name` and `email`
+2. Else, the display name on the `From` header of the user's 3–5 most recent sent emails
+3. Else, the local-part of the authenticated Gmail address, title-cased (e.g. `john.smith@acme.com` → "John Smith")
+4. Else, **stop and ask the user directly**: *"I couldn't identify your name from Gmail. What name should I sign the email with?"* — then wait for their reply and use that verbatim
+
+**Hard rules — never break these, no matter how tempting the signal looks:**
+- `SENDER` is **NOT** the Fireflies meeting host, organizer, or recorder
+- `SENDER` is **NOT** any internal participant name found in the Fireflies transcript
+- `SENDER` is **NOT** the HubSpot deal or contact owner (`hubspot_owner_id` / `search_owners` result)
+- `SENDER` is **NOT** inferred from any name that appears in the transcript, engagement history, or HubSpot record
+
+`SENDER` only comes from the sources in the priority list above. If the priority list fails, you must ask the user — never guess.
+
+---
+
 ## Step 1 — Fetch Fireflies transcripts (up to last 3, chronological)
 
 Search Fireflies for recent meeting transcripts matching `$ARGUMENTS`:
@@ -72,9 +92,9 @@ This is context-only — we are **not** pushing a reply draft to Gmail. Output s
 
 ---
 
-## Step 5 — Sample rep's writing voice + capture rep identity
+## Step 5 — Sample rep's writing voice (last 5 sent emails)
 
-Read the rep's **last 5 sent emails** from their Gmail `Sent` folder (or equivalent). Extract lightweight style signals:
+Read the user's **last 5 sent emails** from their Gmail `Sent` folder (or equivalent). Extract lightweight style signals:
 
 - Greeting style (e.g. "Hi [name]," vs "Hey [name]," vs "Hello [name],")
 - Average sentence length and paragraph density
@@ -82,17 +102,9 @@ Read the rep's **last 5 sent emails** from their Gmail `Sent` folder (or equival
 - Formality level and contraction usage
 - Any recurring closing phrases
 
-Store these as a short voice profile for Step 6.
+Store these as a short voice profile for Step 6. **This step only affects tone/phrasing — it does not determine the sender's name. The sender was already locked in the PREREQUISITE step as `SENDER`. Do not overwrite `SENDER` here.**
 
-**Also capture the rep's identity from Gmail itself** — this is the name that goes on the sign-off. Priority order:
-1. The authenticated Gmail user's profile name (if the Gmail MCP exposes a profile/`get_me`-style call)
-2. Else, the display name on the `From` header of the rep's own sent emails sampled above
-3. Else, the local-part of the rep's Gmail address, title-cased
-4. Else, the literal placeholder `[Your name]`
-
-**Do not use the HubSpot deal/contact owner for the sign-off** — the owner is whoever is assigned to the record in HubSpot and may be a different teammate (SDR, manager, previous owner). The sign-off must be the person actually running the skill, which is the authenticated Gmail user.
-
-**If the rep has no prior sent emails** (new user): skip the voice profile silently and fall back to the professional baseline only. Still try to capture the identity via the profile call (step 1 above) or the `[Your name]` placeholder.
+**If the user has no prior sent emails**: skip silently and fall back to the professional baseline only. No prompt.
 
 ---
 
@@ -110,7 +122,7 @@ Write a follow-up email using the data gathered in Steps 1–5.
 2. **Summary** — 2–3 bullets recapping what was discussed (synthesize across transcripts if multiple). Draw on the engagement-history memo (Step 3) for relevant prior context.
 3. **Next steps** — use **only** the structured `action_items` from Fireflies. If none exist, write: `- No action items captured — add manually.`  **Do not infer action items from transcript prose.**
 4. **CTA** — one specific ask. If the CTA proposes a meeting, insert the literal token `[INSERT CALENDLY LINK]` in the body where the link belongs.
-5. **Sign-off** — use the rep's sign-off from their voice profile, followed by the rep's name who is asking for this (not HubSpot owner). Fall back to `[Your name]` if neither is available.
+5. **Sign-off** — use the sign-off phrase from the voice profile (Step 5), followed by `SENDER.name` from the PREREQUISITE step. **Do NOT use any name from the Fireflies transcript (host, organizer, recorder, or any participant). Do NOT use the HubSpot deal/contact owner. Do NOT use any name that appears in the engagement history.** `SENDER.name` is the only valid source for the sign-off name. It will always be resolved, because the PREREQUISITE step either found it in Gmail or asked the user directly.
 
 **Subject line:** `Follow-up: [Company or Contact Name] — [Most recent meeting date]`
 - If no company/contact name is available, use the raw `$ARGUMENTS` value.
@@ -138,7 +150,7 @@ Display the email to the user in this format:
 - Engagement memo: [5 bullets from Step 3, or "none"]
 - Prior Gmail thread: [subject + date] / [none]
 - Voice profile: [brief — e.g. "Hi + short sentences + 'Cheers,' sign-off"] / [baseline only — no prior sent emails]
-- Signing as: [rep name + email from Step 5] / [placeholder — identity not resolved]
+- Signing as: `SENDER.name <SENDER.email>` — resolved in the PREREQUISITE step
 - Language: [detected language]
 - Calendly placeholder: [present / not needed]
 

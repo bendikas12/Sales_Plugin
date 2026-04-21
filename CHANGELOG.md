@@ -1,3 +1,6 @@
+## 0.6.3 - 2026-04-21
+- Fixed: email-followup-v2 sign-off was still picking up the Fireflies meeting host instead of the actual skill invoker. Identity capture is now a PREREQUISITE step that runs before any Fireflies/HubSpot data is fetched, with an explicit anti-pattern list (not the Fireflies host / organizer / participant, not the HubSpot owner, not engagement-history names) and a hard-stop ask of the user if Gmail identity can't be resolved. Step 5 now only captures writing voice; sign-off in Step 6 references the locked `SENDER` value.
+
 ## 0.6.2 - 2026-04-21
 - Fixed: synced `marketplace.json` version with `plugin.json` — both now at 0.6.2. Without this, Claude Code clients read the stale marketplace version and never pick up new plugin updates.
 - Changed: CLAUDE.md Versioning section now requires bumping both `plugin.json` and `marketplace.json` in lockstep for every change set.

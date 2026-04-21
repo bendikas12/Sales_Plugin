@@ -7,10 +7,16 @@ The user has invoked the sales dashboard skill. The argument (if provided) is: $
 
 ## Output rules — READ THIS FIRST
 
-- The dashboard HTML structure is **fixed**. Use `references/dashboard-template.html` verbatim and only substitute the `{{TOKEN}}` placeholders. Do not add, remove, or reorder tiles. If a metric can't be fetched, render `N/A` for that token — never invent a number and never restructure the template.
+- The dashboard HTML structure is **fixed**. Use `${CLAUDE_PLUGIN_ROOT}/skills/sales-dashboard/references/dashboard-template.html` verbatim and only substitute the `{{TOKEN}}` placeholders. Do not add, remove, or reorder tiles. If a metric can't be fetched, render `N/A` for that token — never invent a number and never restructure the template.
 - Each run **overwrites** the same output file so a daily schedule produces a stable artifact. Default output path: `${HOME}/sales-dashboard.html`. If `$ARGUMENTS` looks like a path (starts with `/`, `~`, or `./`), use that instead.
 - After writing the file, also print a plain-text summary of the same numbers to chat so the rep sees results without opening the file.
 - This skill is personalised to the invoker. All metrics are scoped to **the person running the skill** — never aggregate across the team.
+
+---
+
+## Step 0 — Load the HubSpot glossary
+
+Read `${CLAUDE_PLUGIN_ROOT}/references/hubspot-glossary.md` into working memory before doing anything else. The SessionStart hook normally injects this automatically, but when this skill is invoked outside a fresh session (scheduled job, resumed context after compaction, another agent environment) the hook may not have fired. Re-reading is cheap and guarantees every downstream step has the property glossary and pipeline / stage ID tables available. **Use the absolute `${CLAUDE_PLUGIN_ROOT}/...` path — never a bare `references/...` relative path, which resolves ambiguously depending on the caller's cwd.**
 
 ---
 
@@ -78,21 +84,35 @@ Use the Google Calendar MCP to list events on the rep's primary calendar between
 - A meeting is **customer-facing** if it has at least one attendee whose email domain is **not** `@getpliant.com` and is not `resource.calendar.google.com` (room resources). Exclude declines. Count → `CUSTOMER_FACING_MEETINGS`.
 
 ### HubSpot sales pipeline
-Use `search_crm_objects` with `objectType: "Object"` (deal) and filters:
-- `hubspot_owner_id` = `REP.hubspot_owner_id`
-- `pipeline` = `16177355` (Sales Pipeline — see `references/hubspot-glossary.md`)
-- `name_of_deal_stage` NOT IN (`Account activated`, `Churned`, `Closed lost`)
-- Request properties: `dealname`, `name_of_deal_stage`, `total_addressable_monthly_transaction_volume`
+Use `search_crm_objects` with `objectType: "Object"` (deal). **All filters ANDed in a single filter group**:
+- `hubspot_owner_id` EQ `REP.hubspot_owner_id`
+- `pipeline` EQ `"16177355"` (Sales Pipeline — see `${CLAUDE_PLUGIN_ROOT}/references/hubspot-glossary.md`)
+- `dealstage` NOT IN (`"16177379"`, `"16258181"`, `"30637484"`) — these are **Account activated**, **Closed Lost**, **Churned** respectively. Filter on the numeric `dealstage` ID, not on the `name_of_deal_stage` text label: IDs are stable across label renames and localisations. These IDs are hardcoded here on purpose — do not attempt to look them up or guess them.
+- Request properties: `dealname`, `dealstage`, `total_addressable_monthly_transaction_volume`
+- Set `limit: 100` and paginate using the `after` cursor until every page is fetched. After the first response, note `total`; after the loop, assert `len(all_deals) == total` before summing. If the assertion fails, re-fetch once; if it still fails, render `PIPELINE_DEALS` and `TAM_VOLUME` as `N/A` and note the reason in the chat summary.
 
-From the result set:
-- `PIPELINE_DEALS` = count of deals returned
-- `TAM_VOLUME` = sum of `total_addressable_monthly_transaction_volume` across those deals. Format with the rep's currency if known (else EUR) and thousand separators, e.g. `€1,245,000`. Treat missing values as `0` but don't warn — some deals legitimately have no TAM yet.
+**Sum `TAM_VOLUME` programmatically — never by hand.** After all pages are concatenated into a single JSON array of deal objects, pipe that array into a Python one-liner and use its stdout verbatim. Do **not** read individual property values into your own reasoning and add them up — that's how we got a wrong total last time.
+
+```bash
+python3 -c '
+import json, sys
+deals = json.load(sys.stdin)
+total = sum(float(d.get("properties", {}).get("total_addressable_monthly_transaction_volume") or 0) for d in deals)
+print(int(total))
+' <<< "$DEALS_JSON"
+```
+
+(Equivalent jq works too: `jq '[.[] | (.properties.total_addressable_monthly_transaction_volume // 0 | tonumber)] | add'`.)
+
+Then:
+- `PIPELINE_DEALS` = length of the concatenated deals list (same as `total` from the first page).
+- `TAM_VOLUME` = the integer printed by the script above, formatted with the rep's currency if known (else EUR) and thousand separators, e.g. `€1,245,000`. Null / missing values are treated as 0 by the script — don't warn, some deals legitimately have no TAM yet.
 
 ---
 
 ## Step 4 — Render the dashboard
 
-1. Read `references/dashboard-template.html` from this skill directory.
+1. Read `${CLAUDE_PLUGIN_ROOT}/skills/sales-dashboard/references/dashboard-template.html`.
 2. Substitute every `{{TOKEN}}`. Full list:
    - `{{REP_NAME}}`, `{{REP_EMAIL}}`
    - `{{DATE}}` — `YYYY-MM-DD`

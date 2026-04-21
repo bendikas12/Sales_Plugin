@@ -1,3 +1,9 @@
+## 0.7.2 - 2026-04-21
+- Fixed: sales-dashboard pipeline filter was excluding the wrong deals. The skill now filters on `dealstage` NOT IN (`16177379`, `16258181`, `30637484`) — Account activated / Closed Lost / Churned — hardcoded directly in the skill so it never depends on glossary lookup. IDs are stable, text labels aren't.
+- Fixed: sales-dashboard TAM summation. Step 3 now paginates all deal results, concatenates them, and sums `total_addressable_monthly_transaction_volume` with a `python3` one-liner (jq equivalent documented). Explicitly forbids the previous failure mode of reading values out of the JSON by eye and retyping them. Asserts `len(deals) == total` before summing.
+- Fixed: glossary and template paths. Replaced bare `references/...` paths with absolute `${CLAUDE_PLUGIN_ROOT}/...` ones (matching the hooks convention), and added a Step 0 that re-reads the glossary so the skill works even when the SessionStart hook hasn't fired (scheduled jobs, resumed contexts).
+- Added: `Deal stage ID lookup` table in `references/hubspot-glossary.md` covering the three excluded stages. Other stages can be filled in as future skills need them.
+
 ## 0.7.1 - 2026-04-21
 - Fixed: sales-dashboard emails-sent count. The `hs_email_direction EQ "EMAIL"` filter is now a hard requirement (no fallback), and the search is specified as a single ANDed filter group against `objectType: "Emails"`. Reads `total` with `limit: 1` instead of paginating. Documents the other direction enum values (`INCOMING_EMAIL`, `FORWARDED_EMAIL`, `DRAFT_EMAIL`) as explicitly-not-counted, and requires `hs_timestamp` to be passed as epoch milliseconds. Without this, the previous fallback path let Claude drop the direction filter and over-count.
 

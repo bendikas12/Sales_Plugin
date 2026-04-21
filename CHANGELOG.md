@@ -1,3 +1,6 @@
+## 0.9.0 - 2026-04-21
+- Added: `pliant-brand-guidelines` skill with Pliant's official color palette (primaries, secondaries, tints, neutrals), typography rules (Pangea headlines, Maison Neue body), text-color contrast rules, and application guidance for HTML / PPTX / DOCX outputs. Auto-invoked whenever the user asks for Pliant branding, corporate identity, brand colors, or visual identity on any artifact.
+
 ## 0.8.2 - 2026-04-21
 - Fixed: pipeline-by-stage chart now always shows every canonical stage label on the X axis, with height 0 if no deals are in that stage. Previously the Python grouping filtered empty stages out, so the chart hid parts of the funnel — the rep couldn't see where the gaps were.
 - Fixed: dashboard still wasn't landing on the Desktop. Root cause: the previous bash block used `${ARGUMENTS:-...}` and `eval echo`, which fought with Claude Code's pre-substitution of `$ARGUMENTS` and was ambiguous enough that the model sometimes passed an unresolved `${HOME}/...` string to Write. Rewrote as a single deterministic bash call (`P="$HOME/..."; mkdir -p "$(dirname "$P")"; printf '%s' "$P"`) whose stdout is the absolute path. Skill now captures that stdout and passes it verbatim to Write. No more `eval`, no more parameter expansion guesswork.

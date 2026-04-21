@@ -1,0 +1,131 @@
+---
+description: Render the rep's daily sales dashboard — HubSpot calls/emails this week & month, overdue HubSpot tasks, Gmail unread count, today's meetings (with customer-facing count), and open pipeline deals with total addressable volume. Uses a fixed HTML template overwritten each run so a scheduled job always produces the same file.
+argument-hint: "[optional output path]"
+---
+
+The user has invoked the sales dashboard skill. The argument (if provided) is: $ARGUMENTS
+
+## Output rules — READ THIS FIRST
+
+- The dashboard HTML structure is **fixed**. Use `references/dashboard-template.html` verbatim and only substitute the `{{TOKEN}}` placeholders. Do not add, remove, or reorder tiles. If a metric can't be fetched, render `N/A` for that token — never invent a number and never restructure the template.
+- Each run **overwrites** the same output file so a daily schedule produces a stable artifact. Default output path: `${HOME}/sales-dashboard.html`. If `$ARGUMENTS` looks like a path (starts with `/`, `~`, or `./`), use that instead.
+- After writing the file, also print a plain-text summary of the same numbers to chat so the rep sees results without opening the file.
+- This skill is personalised to the invoker. All metrics are scoped to **the person running the skill** — never aggregate across the team.
+
+---
+
+## Step 1 — Identify the rep (who is running this skill)
+
+Resolve the invoker's Gmail identity before anything else. Store as `REP`:
+
+Priority (stop at first that succeeds):
+1. Gmail MCP profile / `get_me` → take `name` + `emailAddress`
+2. `From` header display name on the 3 most recent sent messages + authenticated address
+3. Title-case the local-part of the authenticated Gmail address (e.g. `jane.doe@getpliant.com` → "Jane Doe")
+4. If none work, stop and ask: *"I couldn't identify your Gmail account. What name and email should I build the dashboard for?"*
+
+**Hard rules:**
+- `REP` is **never** a HubSpot deal owner name, a Fireflies host, or a contact in the CRM. It only comes from the Gmail identity sources above.
+- Once resolved, resolve `REP.hubspot_owner_id` via `search_owners` keyed on `REP.email`. To load the owners tool schema, use `ToolSearch` with the keyword query `owners` (the MCP server prefix varies across environments). If no HubSpot owner matches the email, render HubSpot metrics as `N/A` and note it in the chat summary — do not guess a different owner.
+
+---
+
+## Step 2 — Compute the time windows
+
+Use the rep's local timezone (infer from Gmail profile or Calendar; fall back to UTC if unavailable).
+
+- `TODAY_START` = 00:00 local, today
+- `TODAY_END` = 23:59:59 local, today
+- `WEEK_START` = Monday 00:00 of the current ISO week
+- `MONTH_START` = 1st of the current calendar month, 00:00
+- `NOW` = current timestamp
+
+Record these as timestamps for filter use. Also compute `GENERATED_AT` (ISO 8601, local tz) for the footer.
+
+---
+
+## Step 3 — Fetch metrics (run in parallel where possible)
+
+### HubSpot calls
+Use `search_crm_objects` with `objectType: "Call"` and filters:
+- `hubspot_owner_id` = `REP.hubspot_owner_id`
+- `hs_timestamp` ≥ `WEEK_START` → count → `CALLS_WEEK`
+- Repeat with `hs_timestamp` ≥ `MONTH_START` → count → `CALLS_MONTH`
+
+### HubSpot emails sent
+Use `search_crm_objects` with `objectType: "Email"` and filters:
+- `hubspot_owner_id` = `REP.hubspot_owner_id`
+- `hs_email_direction` = `EMAIL` (outbound) — if that filter isn't available in this environment, fall back to `hs_email_status` in (`SENT`, `BOUNCED`) or omit direction and note it in chat
+- `hs_timestamp` ≥ `WEEK_START` → count → `EMAILS_WEEK`
+- Repeat with `hs_timestamp` ≥ `MONTH_START` → count → `EMAILS_MONTH`
+
+### HubSpot overdue tasks
+Use `search_crm_objects` with `objectType: "Task"` and filters:
+- `hubspot_owner_id` = `REP.hubspot_owner_id`
+- `hs_task_status` ≠ `COMPLETED`
+- `hs_timestamp` < `NOW` (task due date in the past)
+- Count → `OVERDUE_TASKS`
+
+### Gmail unread
+Use the Gmail MCP `list_messages` / equivalent with query `is:unread in:inbox category:primary` (fall back to `is:unread in:inbox` if category filtering isn't supported). Use `resultSizeEstimate` or the unread count from the INBOX label if the MCP exposes it directly (cheaper than listing messages). → `UNREAD_EMAILS`
+
+### Calendar meetings today
+Use the Google Calendar MCP to list events on the rep's primary calendar between `TODAY_START` and `TODAY_END`.
+- Exclude cancelled events and all-day OOO blocks.
+- `MEETINGS_TODAY` = total count.
+- A meeting is **customer-facing** if it has at least one attendee whose email domain is **not** `@getpliant.com` and is not `resource.calendar.google.com` (room resources). Exclude declines. Count → `CUSTOMER_FACING_MEETINGS`.
+
+### HubSpot sales pipeline
+Use `search_crm_objects` with `objectType: "Object"` (deal) and filters:
+- `hubspot_owner_id` = `REP.hubspot_owner_id`
+- `pipeline` = `16177355` (Sales Pipeline — see `references/hubspot-glossary.md`)
+- `name_of_deal_stage` NOT IN (`Account activated`, `Churned`, `Closed lost`)
+- Request properties: `dealname`, `name_of_deal_stage`, `total_addressable_monthly_transaction_volume`
+
+From the result set:
+- `PIPELINE_DEALS` = count of deals returned
+- `TAM_VOLUME` = sum of `total_addressable_monthly_transaction_volume` across those deals. Format with the rep's currency if known (else EUR) and thousand separators, e.g. `€1,245,000`. Treat missing values as `0` but don't warn — some deals legitimately have no TAM yet.
+
+---
+
+## Step 4 — Render the dashboard
+
+1. Read `references/dashboard-template.html` from this skill directory.
+2. Substitute every `{{TOKEN}}`. Full list:
+   - `{{REP_NAME}}`, `{{REP_EMAIL}}`
+   - `{{DATE}}` — `YYYY-MM-DD`
+   - `{{GENERATED_AT}}` — ISO 8601 with timezone
+   - `{{CALLS_WEEK}}`, `{{CALLS_MONTH}}`
+   - `{{EMAILS_WEEK}}`, `{{EMAILS_MONTH}}`
+   - `{{OVERDUE_TASKS}}`
+   - `{{UNREAD_EMAILS}}`
+   - `{{MEETINGS_TODAY}}`, `{{CUSTOMER_FACING_MEETINGS}}`
+   - `{{PIPELINE_DEALS}}`, `{{TAM_VOLUME}}`
+3. Write the result to the resolved output path (Step 0 default or `$ARGUMENTS`). Use the Write tool — it overwrites existing files by design, which is what the daily schedule relies on.
+
+---
+
+## Step 5 — Print a chat summary
+
+After writing, print exactly this block so the rep sees the numbers inline:
+
+```
+Sales Dashboard — <REP_NAME> — <DATE>
+
+HubSpot activity
+  Calls logged     week <CALLS_WEEK>   month <CALLS_MONTH>
+  Emails sent      week <EMAILS_WEEK>  month <EMAILS_MONTH>
+  Overdue tasks    <OVERDUE_TASKS>
+
+Inbox & calendar
+  Unread emails    <UNREAD_EMAILS>
+  Meetings today   <MEETINGS_TODAY>  (customer-facing: <CUSTOMER_FACING_MEETINGS>)
+
+Sales pipeline
+  Active deals     <PIPELINE_DEALS>
+  TAM volume       <TAM_VOLUME>
+
+Written to: <output path>
+```
+
+If any metric failed to fetch, replace its value with `N/A` and add a final line `Note: <reason>` (one line per failed metric). Do not retry failed fetches more than once.

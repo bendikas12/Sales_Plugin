@@ -23,6 +23,12 @@
   - MINOR (0.2.0): new skills, hooks, commands
   - MAJOR (1.0.0): breaking changes or major restructure
 
+## Guru — company knowledge source
+
+Whenever the user asks about internal company knowledge — Pliant policies, processes, playbooks, product details, sales enablement, onboarding/compliance procedures, internal FAQs, or anything that would live in an internal wiki — you MUST use the Guru connector (MCP tools prefixed with `guru`) to search Guru before answering. Do not answer from general knowledge or assumptions for these topics.
+
+This does NOT apply to HubSpot CRM data (deals, contacts, companies, pipeline) — that stays on the HubSpot connector.
+
 ## Plugin structure
 - Skills go in `skills/<skill-name>/SKILL.md`
 - Hooks go in `hooks/hooks.json`

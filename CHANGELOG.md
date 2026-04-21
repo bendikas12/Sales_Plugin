@@ -1,3 +1,6 @@
+## 0.7.0 - 2026-04-21
+- Added: `sales-dashboard` skill and `/dashboard` command. Renders a fixed HTML dashboard (template at `skills/sales-dashboard/references/dashboard-template.html`) with the invoker's HubSpot calls & emails (this week / this month), overdue HubSpot tasks, Gmail unread count, today's meetings (total + customer-facing), open Sales Pipeline deal count, and summed total addressable monthly transaction volume (excludes Account activated / Churned / Closed lost). Rep identity is resolved from Gmail only, then mapped to a HubSpot owner — team-wide aggregation is never done. Output path is stable (`$HOME/sales-dashboard.html` by default, overridable via argument) so a daily scheduled run overwrites the same file.
+
 ## 0.6.4 - 2026-04-21
 - Changed: email-followup-v2 no longer invents a CTA. Removed the "CTA" item from the email structure and the associated `[INSERT CALENDLY LINK]` token + Calendly placeholder render line. The draft ends after the Next steps bullets (from Fireflies `action_items`) and the sign-off. Removes the default "let's schedule a demo" ask that was surfacing on post-demo follow-ups.
 

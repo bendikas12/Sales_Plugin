@@ -1,3 +1,7 @@
+## 0.11.0 - 2026-04-21
+- Added: new `SessionStart` hook `load-guru-guidance.sh` that injects a system message telling Claude to use the Guru connector (MCP) whenever the user asks about internal company knowledge — policies, processes, playbooks, product details, sales enablement, onboarding / compliance procedures, internal FAQs, or anything that would live in an internal wiki. Explicitly scoped to exclude HubSpot CRM data, which stays on the HubSpot connector. If no Guru tool is available in the session, Claude is instructed to tell the user rather than guess.
+- Changed: `hooks/hooks.json` now registers both `load-hubspot-glossary.sh` and `load-guru-guidance.sh` on `SessionStart` (matcher `startup|resume`).
+
 ## 0.10.1 - 2026-04-21
 - Changed: `pliant-design` now forbids dark backgrounds entirely. Pliant Black, Dark Charcoal, Pliant Gray (`#404c52`), and the Dark tint column are reclassified as element colors (text, icons, borders, small shapes, chips) — never backgrounds for pages, sections, slides, cards, or modals. Backgrounds are restricted to White or light neutrals (Pliant Gray 1 / Gray 2).
 - Changed: removed the CaaS "Dark Charcoal as main background" guidance. Tech feel is now achieved via dark elements on light surfaces, not an inverted canvas.

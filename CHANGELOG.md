@@ -1,3 +1,6 @@
+## 0.6.1 - 2026-04-21
+- Fixed: email-followup-v2 sign-off now uses the authenticated Gmail user (the person running the skill), not the HubSpot deal/contact owner. Step 5 now also captures rep identity, with fallbacks: Gmail profile → From-header display name on sent mail → title-cased local-part → `[Your name]`. "Signing as" line added to the rendered context summary.
+
 ## 0.6.0 - 2026-04-20
 - Added: email-followup-v2 skill — parallel v2 of email-followup for A/B comparison. Adds multi-meeting synthesis (up to 3 transcripts, chronological), prior Gmail thread awareness, cost-bounded HubSpot engagement memo, email-based contact lookup, multi-recipient To/CC, structured-only action items (no inference), Calendly placeholder token, rep voice sampling from last 5 sent emails, Fireflies-based language detection. Renders email in Claude instead of pushing to Gmail.
 

@@ -1,3 +1,6 @@
+## 0.6.4 - 2026-04-21
+- Changed: email-followup-v2 no longer invents a CTA. Removed the "CTA" item from the email structure and the associated `[INSERT CALENDLY LINK]` token + Calendly placeholder render line. The draft ends after the Next steps bullets (from Fireflies `action_items`) and the sign-off. Removes the default "let's schedule a demo" ask that was surfacing on post-demo follow-ups.
+
 ## 0.6.3 - 2026-04-21
 - Fixed: email-followup-v2 sign-off was still picking up the Fireflies meeting host instead of the actual skill invoker. Identity capture is now a PREREQUISITE step that runs before any Fireflies/HubSpot data is fetched, with an explicit anti-pattern list (not the Fireflies host / organizer / participant, not the HubSpot owner, not engagement-history names) and a hard-stop ask of the user if Gmail identity can't be resolved. Step 5 now only captures writing voice; sign-off in Step 6 references the locked `SENDER` value.
 

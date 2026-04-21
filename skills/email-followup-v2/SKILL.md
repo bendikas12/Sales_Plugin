@@ -72,7 +72,7 @@ This is context-only — we are **not** pushing a reply draft to Gmail. Output s
 
 ---
 
-## Step 5 — Sample rep's writing voice (last 5 sent emails)
+## Step 5 — Sample rep's writing voice + capture rep identity
 
 Read the rep's **last 5 sent emails** from their Gmail `Sent` folder (or equivalent). Extract lightweight style signals:
 
@@ -84,7 +84,15 @@ Read the rep's **last 5 sent emails** from their Gmail `Sent` folder (or equival
 
 Store these as a short voice profile for Step 6.
 
-**If the rep has no prior sent emails** (new user): skip silently and fall back to the professional baseline only. Do not prompt.
+**Also capture the rep's identity from Gmail itself** — this is the name that goes on the sign-off. Priority order:
+1. The authenticated Gmail user's profile name (if the Gmail MCP exposes a profile/`get_me`-style call)
+2. Else, the display name on the `From` header of the rep's own sent emails sampled above
+3. Else, the local-part of the rep's Gmail address, title-cased
+4. Else, the literal placeholder `[Your name]`
+
+**Do not use the HubSpot deal/contact owner for the sign-off** — the owner is whoever is assigned to the record in HubSpot and may be a different teammate (SDR, manager, previous owner). The sign-off must be the person actually running the skill, which is the authenticated Gmail user.
+
+**If the rep has no prior sent emails** (new user): skip the voice profile silently and fall back to the professional baseline only. Still try to capture the identity via the profile call (step 1 above) or the `[Your name]` placeholder.
 
 ---
 
@@ -102,7 +110,7 @@ Write a follow-up email using the data gathered in Steps 1–5.
 2. **Summary** — 2–3 bullets recapping what was discussed (synthesize across transcripts if multiple). Draw on the engagement-history memo (Step 3) for relevant prior context.
 3. **Next steps** — use **only** the structured `action_items` from Fireflies. If none exist, write: `- No action items captured — add manually.`  **Do not infer action items from transcript prose.**
 4. **CTA** — one specific ask. If the CTA proposes a meeting, insert the literal token `[INSERT CALENDLY LINK]` in the body where the link belongs.
-5. **Sign-off** — use the rep's sign-off from their voice profile, followed by the rep's name from the HubSpot owner record. Fall back to `[Your name]` if neither is available.
+5. **Sign-off** — use the rep's sign-off phrase from their voice profile (Step 5), followed by the **rep identity captured in Step 5** (the authenticated Gmail user — never the HubSpot owner). Fall back to `[Your name]` only if Step 5 couldn't determine an identity.
 
 **Subject line:** `Follow-up: [Company or Contact Name] — [Most recent meeting date]`
 - If no company/contact name is available, use the raw `$ARGUMENTS` value.
@@ -130,6 +138,7 @@ Display the email to the user in this format:
 - Engagement memo: [5 bullets from Step 3, or "none"]
 - Prior Gmail thread: [subject + date] / [none]
 - Voice profile: [brief — e.g. "Hi + short sentences + 'Cheers,' sign-off"] / [baseline only — no prior sent emails]
+- Signing as: [rep name + email from Step 5] / [placeholder — identity not resolved]
 - Language: [detected language]
 - Calendly placeholder: [present / not needed]
 

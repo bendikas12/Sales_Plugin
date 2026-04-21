@@ -8,7 +8,7 @@ The user has invoked the sales dashboard skill. The argument (if provided) is: $
 ## Output rules — READ THIS FIRST
 
 - The dashboard HTML structure is **fixed**. Use `${CLAUDE_PLUGIN_ROOT}/skills/sales-dashboard/references/dashboard-template.html` verbatim and only substitute the `{{TOKEN}}` placeholders. Do not add, remove, or reorder tiles. If a metric can't be fetched, render `N/A` for that token — never invent a number and never restructure the template.
-- Each run **overwrites** the same output file so a daily schedule produces a stable artifact. Default output path: `${HOME}/sales-dashboard.html`. If `$ARGUMENTS` looks like a path (starts with `/`, `~`, or `./`), use that instead.
+- Each run **overwrites** the same output file so the rep can bookmark it once and reopen it every morning to see fresh numbers. **Default output path: `${HOME}/Desktop/Claude/Dashboard/sales-dashboard.html`.** If `$ARGUMENTS` looks like a path (starts with `/`, `~`, or `./`), use that instead. Before writing, ensure the parent directory exists — run `mkdir -p "$(dirname "<output-path>")"` via Bash so the `Claude/Dashboard/` folders are created automatically on first run. Never change the filename between runs; the stable bookmark depends on it.
 - After writing the file, also print a plain-text summary of the same numbers to chat so the rep sees results without opening the file.
 - This skill is personalised to the invoker. All metrics are scoped to **the person running the skill** — never aggregate across the team.
 
@@ -123,7 +123,7 @@ Then:
    - `{{UNREAD_EMAILS}}`
    - `{{MEETINGS_TODAY}}`, `{{CUSTOMER_FACING_MEETINGS}}`
    - `{{PIPELINE_DEALS}}`, `{{TAM_VOLUME}}`
-3. Write the result to the resolved output path (Step 0 default or `$ARGUMENTS`). Use the Write tool — it overwrites existing files by design, which is what the daily schedule relies on.
+3. Ensure the parent directory exists: `mkdir -p "$(dirname "<output-path>")"`. Then write the result to the resolved output path (default `${HOME}/Desktop/Claude/Dashboard/sales-dashboard.html`, or `$ARGUMENTS` if it's a path). Use the Write tool — it overwrites existing files by design, which is what the rep's bookmark relies on.
 
 ---
 

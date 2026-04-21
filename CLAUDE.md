@@ -25,7 +25,7 @@
 
 ## Guru — company knowledge source
 
-Whenever the user asks about internal company knowledge — Pliant policies, processes, playbooks, product details, sales enablement, onboarding/compliance procedures, internal FAQs, or anything that would live in an internal wiki — you MUST use the Guru connector (MCP tools prefixed with `guru`) to search Guru before answering. Do not answer from general knowledge or assumptions for these topics.
+Whenever the user asks about internal company knowledge — Pliant policies, processes, playbooks, product details, sales enablement, onboarding/compliance procedures, internal FAQs, or anything that would live in an internal wiki — you MUST use the Guru connector (MCP tools prefixed with `guru`) to search Guru before answering. Do not answer from general knowledge or assumptions for these topics. Use this agent ID `da16cc80-6e0c-43cb-b933-797c652a17a1`
 
 This does NOT apply to HubSpot CRM data (deals, contacts, companies, pipeline) — that stays on the HubSpot connector.
 

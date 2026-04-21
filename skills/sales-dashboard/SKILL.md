@@ -53,11 +53,13 @@ Use `search_crm_objects` with `objectType: "Call"` and filters:
 - Repeat with `hs_timestamp` ≥ `MONTH_START` → count → `CALLS_MONTH`
 
 ### HubSpot emails sent
-Use `search_crm_objects` with `objectType: "Email"` and filters:
-- `hubspot_owner_id` = `REP.hubspot_owner_id`
-- `hs_email_direction` = `EMAIL` (outbound) — if that filter isn't available in this environment, fall back to `hs_email_status` in (`SENT`, `BOUNCED`) or omit direction and note it in chat
-- `hs_timestamp` ≥ `WEEK_START` → count → `EMAILS_WEEK`
-- Repeat with `hs_timestamp` ≥ `MONTH_START` → count → `EMAILS_MONTH`
+Use `search_crm_objects` with `objectType: "Emails"` (HubSpot engagement type). **All filters below must be ANDed inside a single filter group**:
+- `hubspot_owner_id` EQ `REP.hubspot_owner_id`
+- `hs_email_direction` EQ `"EMAIL"` — this is the enum value for **Outgoing**. Do not omit or substitute. Other values (`INCOMING_EMAIL`, `FORWARDED_EMAIL`, `DRAFT_EMAIL`) must not be counted.
+- `hs_timestamp` GTE `WEEK_START` (epoch milliseconds) → set `limit: 1` and read `total` from the response → `EMAILS_WEEK`
+- Repeat the request with `hs_timestamp` GTE `MONTH_START` (epoch milliseconds) → read `total` → `EMAILS_MONTH`
+
+All timestamps must be passed as **epoch milliseconds** computed in the rep's local timezone.
 
 ### HubSpot overdue tasks
 Use `search_crm_objects` with `objectType: "Task"` and filters:

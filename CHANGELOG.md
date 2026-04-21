@@ -1,3 +1,6 @@
+## 0.7.1 - 2026-04-21
+- Fixed: sales-dashboard emails-sent count. The `hs_email_direction EQ "EMAIL"` filter is now a hard requirement (no fallback), and the search is specified as a single ANDed filter group against `objectType: "Emails"`. Reads `total` with `limit: 1` instead of paginating. Documents the other direction enum values (`INCOMING_EMAIL`, `FORWARDED_EMAIL`, `DRAFT_EMAIL`) as explicitly-not-counted, and requires `hs_timestamp` to be passed as epoch milliseconds. Without this, the previous fallback path let Claude drop the direction filter and over-count.
+
 ## 0.7.0 - 2026-04-21
 - Added: `sales-dashboard` skill and `/dashboard` command. Renders a fixed HTML dashboard (template at `skills/sales-dashboard/references/dashboard-template.html`) with the invoker's HubSpot calls & emails (this week / this month), overdue HubSpot tasks, Gmail unread count, today's meetings (total + customer-facing), open Sales Pipeline deal count, and summed total addressable monthly transaction volume (excludes Account activated / Churned / Closed lost). Rep identity is resolved from Gmail only, then mapped to a HubSpot owner — team-wide aggregation is never done. Output path is stable (`$HOME/sales-dashboard.html` by default, overridable via argument) so a daily scheduled run overwrites the same file.
 

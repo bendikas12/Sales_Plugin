@@ -123,9 +123,7 @@ Write a follow-up email using the data gathered in Steps 1–5.
 3. **Next steps** — use **only** the structured `action_items` from Fireflies. If none exist, write: `- No action items captured — add manually.`  **Do not infer action items from transcript prose.**
 4. **Sign-off** — use the sign-off phrase from the voice profile (Step 5), followed by `SENDER.name` from the PREREQUISITE step. **Do NOT use any name from the Fireflies transcript (host, organizer, recorder, or any participant). Do NOT use the HubSpot deal/contact owner. Do NOT use any name that appears in the engagement history.** `SENDER.name` is the only valid source for the sign-off name. It will always be resolved, because the PREREQUISITE step either found it in Gmail or asked the user directly.
 
-**Do not invent a CTA or ask.** The email ends after the Next steps bullets and the sign-off. If there is a real next ask, it will already be in the Fireflies `action_items` — the rep adds anything extra manually before sending.
-
-**Subject line:** `Follow-up: [Company or Contact Name] — [Most recent meeting date]`
+**Subject line:** `Follow-up: [Company Name] x Pliant`
 - If no company/contact name is available, use the raw `$ARGUMENTS` value.
 
 **Recipients:**

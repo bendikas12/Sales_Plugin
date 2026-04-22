@@ -75,9 +75,6 @@
 ## 0.5.0 - 2026-04-15
 - Added: meeting-prep skill — generates a full meeting preparation brief with company snapshot, contact intel, discovery questions, pain points, and opening insight using web research + HubSpot context
 
-## 0.3.0 - 2026-04-10
-- Added: email-followup skill — drafts post-meeting follow-up emails using Fireflies transcript + HubSpot context, with Gmail draft push
-
 ## 0.4.4 - 2026-04-09
 - Added: pipeline ID lookup table to glossary — maps all 6 pipeline IDs to human-readable names (Pre-Sales Pipeline, Sales Pipeline, Referrer, Partner Team, Banking, Insurance)
 - Fixed: marked `pipeline` field type as `enumeration` with note that it returns an ID
@@ -98,6 +95,9 @@
 ## 0.4.0 - 2026-04-09
 - Added: `references/hubspot-glossary.md` — shared property glossary with verified field names, types, and common aliases for deals, contacts, and companies
 - Added: CLAUDE.md rule to always consult the glossary before using `search_properties`, so ad-hoc HubSpot queries resolve correct field names without triggering a skill
+
+## 0.3.1 - 2026-04-10
+- Added: email-followup skill — drafts post-meeting follow-up emails using Fireflies transcript + HubSpot context, with Gmail draft push
 
 ## 0.3.0 - 2026-04-09
 - Added: hubspot-record-analysis — deal analysis now includes transaction volume history properties: `trx_vol_last_0_to_30_days`, `trx_vol_last_31_to_60_days`, `trx_vol_last_61_to_90_days`, `trx_vol_last_0_to_180_days`

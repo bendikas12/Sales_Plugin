@@ -1,3 +1,6 @@
+## 0.11.3 - 2026-04-22
+- Fixed: sales-dashboard was still not landing on the rep's local Desktop when run under Claude Code on the web — `$HOME` resolved inside the cloud sandbox, not on the user's Mac. Output-path resolution now (1) honours an explicit `$ARGUMENTS` path if supplied, (2) otherwise calls `request_cowork_directory` to mount `~/Desktop` on the user's real filesystem and writes to `<mounted>/Claude/Dashboard/sales-dashboard.html`, (3) resolves the final string via the same `P=...; mkdir -p; printf` Bash block before passing to Write. Filename stays stable so the bookmark keeps working.
+
 ## 0.11.0 - 2026-04-21
 - Added: new `SessionStart` hook `load-guru-guidance.sh` that injects a system message telling Claude to use the Guru connector (MCP) whenever the user asks about internal company knowledge — policies, processes, playbooks, product details, sales enablement, onboarding / compliance procedures, internal FAQs, or anything that would live in an internal wiki. Explicitly scoped to exclude HubSpot CRM data, which stays on the HubSpot connector. If no Guru tool is available in the session, Claude is instructed to tell the user rather than guess.
 - Changed: `hooks/hooks.json` now registers both `load-hubspot-glossary.sh` and `load-guru-guidance.sh` on `SessionStart` (matcher `startup|resume`).

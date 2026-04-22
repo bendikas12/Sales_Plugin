@@ -73,16 +73,16 @@ Additional stage IDs can be added here as other skills need them.
 
 | Stage | What it means |
 |---|---|
-| Discovery / Demo Scheduled | First contact made and discovery / demo is on the calendar but hasn't happened yet. |
-| Solution Qualification / Demo conducted | Customer has landed in the CRM and initial demo has been conducted. Early qualification phase. |
-| Business Case Validation | Post-demo. Validating the business case — ROI, use-cases, fit — before commercial discussion. |
-| Commercial Alignment | Business case accepted. Aligning on pricing, terms, and commercial structure. |
-| Pre-Onboarding | Client is in pre-onboarding. Platform registration (transaction link) is underway. Account has been created — waiting on customer to proceed. |
-| Submitted to credit | All initial information has been provided and filled out. Pliant Compliance has started the credit assessment. |
-| Info requested | Compliance documents have been requested. Waiting on the customer to submit. |
-| Info partially obtained | Some compliance documents have been received. Waiting on customer to provide the remaining documents. |
-| Info fully obtained | All compliance documents have been received. Pliant Compliance is continuing the full assessment. |
-| Submitted to partner bank | Customer has been pre-checked and approved internally. Deal has been submitted to the partner bank for final review. |
-| Account activated | Account is ready to use. Cards can be issued. Deal is live. |
-| Closed lost | Deal has dropped out of the pipeline. Check the loss reason property if available. |
-| Churned | Customer was active but decided to leave Pliant. |
+| Discovery / Demo Scheduled | Demo call is scheduled. |
+| Solution Qualification / Demo conducted | Customer landed in CRM, initial demo done. Early qualification. |
+| Business Case Validation |
+| Commercial Alignment |
+| Pre-Onboarding | Platform registration underway. Account created — waiting on customer. |
+| Submitted to credit | Info provided. Pliant Compliance started credit assessment. |
+| Info requested | Compliance docs requested. Waiting on customer. |
+| Info partially obtained | Some docs received. Waiting on remaining. |
+| Info fully obtained | All docs received. Full compliance assessment in progress. |
+| Submitted to partner bank | Pre-checked and approved internally. Sent to partner bank for final review. |
+| Account activated | Live. Cards can be issued. |
+| Closed lost | Dropped out of pipeline. Check loss reason if available. |
+| Churned | Was active, decided to leave Pliant. |

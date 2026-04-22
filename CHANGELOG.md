@@ -1,5 +1,29 @@
-## 0.8.3 - 2026-04-21
-- Fixed: dashboard now actually lands on the rep's Mac Desktop when running in the cowork cloud env. Root cause of the previous 0.8.x fixes not working: `$HOME` in the cowork sandbox resolves to a sandbox path, not the user's real Mac home, so the file was silently written to the wrong filesystem. Skill now calls `request_cowork_directory` to mount `~/Desktop` from the user's real local filesystem into the sandbox, then writes to `<mounted>/Claude/Dashboard/sales-dashboard.html`. Bash-level path resolution still runs so the Write tool gets a literal absolute path. Local CLI runs fall through the `$ARGUMENTS` path override as before.
+## 0.11.3 - 2026-04-21
+- Fixed: sales-dashboard now actually lands on the rep's Mac Desktop when running in the cowork cloud env. Root cause of the previous 0.8.x fixes not working: `$HOME` in the cowork sandbox resolves to a sandbox path, not the user's real Mac home, so the file was silently written to the wrong filesystem. Skill now calls `request_cowork_directory` to mount `~/Desktop` from the user's real local filesystem into the sandbox, then writes to `<mounted>/Claude/Dashboard/sales-dashboard.html`. Bash-level path resolution still runs so the Write tool gets a literal absolute path. Local CLI runs fall through the `$ARGUMENTS` path override as before.
+- Fixed: backfilled missing CHANGELOG entries for 0.6.5, 0.11.1, and 0.11.2 (all were silent version bumps with no changelog documentation). See entries below.
+
+## 0.11.2 - 2026-04-21
+- Changed: Guru guidance in `CLAUDE.md` now pins the specific Guru agent ID `da16cc80-6e0c-43cb-b933-797c652a17a1`, so knowledge-base lookups route to the correct agent instead of being resolved ambiguously.
+
+## 0.11.1 - 2026-04-21
+- Added: `CLAUDE.md` rule "Guru — company knowledge source" — requires using the Guru connector (MCP tools prefixed with `guru`) before answering questions about internal company knowledge (policies, processes, playbooks, product details, sales enablement, onboarding / compliance, internal FAQs). Explicitly scoped to exclude HubSpot CRM data. Companion to the 0.11.0 hook; the hook injects the guidance at session start, this rule makes it permanent in the project instructions.
+
+## 0.11.0 - 2026-04-21
+- Added: new `SessionStart` hook `load-guru-guidance.sh` that injects a system message telling Claude to use the Guru connector (MCP) whenever the user asks about internal company knowledge — policies, processes, playbooks, product details, sales enablement, onboarding / compliance procedures, internal FAQs, or anything that would live in an internal wiki. Explicitly scoped to exclude HubSpot CRM data, which stays on the HubSpot connector. If no Guru tool is available in the session, Claude is instructed to tell the user rather than guess.
+- Changed: `hooks/hooks.json` now registers both `load-hubspot-glossary.sh` and `load-guru-guidance.sh` on `SessionStart` (matcher `startup|resume`).
+
+## 0.10.1 - 2026-04-21
+- Changed: `pliant-design` now forbids dark backgrounds entirely. Pliant Black, Dark Charcoal, Pliant Gray (`#404c52`), and the Dark tint column are reclassified as element colors (text, icons, borders, small shapes, chips) — never backgrounds for pages, sections, slides, cards, or modals. Backgrounds are restricted to White or light neutrals (Pliant Gray 1 / Gray 2).
+- Changed: removed the CaaS "Dark Charcoal as main background" guidance. Tech feel is now achieved via dark elements on light surfaces, not an inverted canvas.
+- Changed: Text Color Rules table dropped the Black / Dark-background rows and now documents text-on-dark only for dark *elements* (chips/icons/shapes) sitting on a light page. Per-artifact HTML/PPTX sections explicitly prohibit setting dark `background-color` / slide fills.
+- Changed: Pliant Black usage in the Primary Colors table is now "text, logos, small element fills — never a background" (the swag-background exception is removed).
+
+## 0.10.0 - 2026-04-21
+- Changed: renamed `pliant-brand-guidelines` skill to `pliant-design` (directory + SKILL.md `name` frontmatter). Auto-invocation description updated to match.
+- Added: shape & corners section to `pliant-design` — Pliant visuals use rounded corners, never sharp. Documents a radius scale (chips 6px, buttons/inputs 10px, cards/tables 16px, hero/modals 24px, pills 9999px, images 12–16px), nesting rules (children ≤ parent), and a hard "no 0px corners on branded surfaces" rule. Per-artifact guidance now specifies radii for HTML, `MSO_SHAPE.ROUNDED_RECTANGLE` with adjustments ~0.1/~0.15 for PPTX, and `roundRect` preset geometry for DOCX shapes.
+
+## 0.9.0 - 2026-04-21
+- Added: `pliant-brand-guidelines` skill with Pliant's official color palette (primaries, secondaries, tints, neutrals), typography rules (Pangea headlines, Maison Neue body), text-color contrast rules, and application guidance for HTML / PPTX / DOCX outputs. Auto-invoked whenever the user asks for Pliant branding, corporate identity, brand colors, or visual identity on any artifact.
 
 ## 0.8.2 - 2026-04-21
 - Fixed: pipeline-by-stage chart now always shows every canonical stage label on the X axis, with height 0 if no deals are in that stage. Previously the Python grouping filtered empty stages out, so the chart hid parts of the funnel — the rep couldn't see where the gaps were.
@@ -29,6 +53,9 @@
 ## 0.7.0 - 2026-04-21
 - Added: `sales-dashboard` skill and `/dashboard` command. Renders a fixed HTML dashboard (template at `skills/sales-dashboard/references/dashboard-template.html`) with the invoker's HubSpot calls & emails (this week / this month), overdue HubSpot tasks, Gmail unread count, today's meetings (total + customer-facing), open Sales Pipeline deal count, and summed total addressable monthly transaction volume (excludes Account activated / Churned / Closed lost). Rep identity is resolved from Gmail only, then mapped to a HubSpot owner — team-wide aggregation is never done. Output path is stable (`$HOME/sales-dashboard.html` by default, overridable via argument) so a daily scheduled run overwrites the same file.
 
+## 0.6.5 - 2026-04-21
+- Changed: version-only bump in `plugin.json` and `marketplace.json` (commits `fab0fe3` and `2823910`). No functional changes — entry backfilled for version continuity.
+
 ## 0.6.4 - 2026-04-21
 - Changed: email-followup-v2 no longer invents a CTA. Removed the "CTA" item from the email structure and the associated `[INSERT CALENDLY LINK]` token + Calendly placeholder render line. The draft ends after the Next steps bullets (from Fireflies `action_items`) and the sign-off. Removes the default "let's schedule a demo" ask that was surfacing on post-demo follow-ups.
 
@@ -50,6 +77,7 @@
 
 ## 0.3.0 - 2026-04-10
 - Added: email-followup skill — drafts post-meeting follow-up emails using Fireflies transcript + HubSpot context, with Gmail draft push
+
 ## 0.4.4 - 2026-04-09
 - Added: pipeline ID lookup table to glossary — maps all 6 pipeline IDs to human-readable names (Pre-Sales Pipeline, Sales Pipeline, Referrer, Partner Team, Banking, Insurance)
 - Fixed: marked `pipeline` field type as `enumeration` with note that it returns an ID

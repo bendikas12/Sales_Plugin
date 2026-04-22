@@ -8,13 +8,17 @@ The user has invoked the sales dashboard skill. The argument (if provided) is: $
 ## Output rules — READ THIS FIRST
 
 - The dashboard HTML structure is **fixed**. Use `${CLAUDE_PLUGIN_ROOT}/skills/sales-dashboard/references/dashboard-template.html` verbatim and only substitute the `{{TOKEN}}` placeholders. Do not add, remove, or reorder tiles. If a metric can't be fetched, render `N/A` for that token — never invent a number and never restructure the template.
-- Each run **overwrites** the same output file so the rep can bookmark it once and reopen it every morning to see fresh numbers. **Resolve the output path via a single Bash call, then pass the printed absolute path to the Write tool.** The Write tool does not expand `$HOME`, `${HOME}`, or `~` — it takes a literal path string, so you must resolve it first:
-  ```bash
-  P="$HOME/Desktop/Claude/Dashboard/sales-dashboard.html"
-  mkdir -p "$(dirname "$P")"
-  printf '%s' "$P"
-  ```
-  Run this one Bash call, capture stdout (something like `/Users/jane/Desktop/Claude/Dashboard/sales-dashboard.html`), and use that literal string as the `file_path` argument to Write. If the user passed a path in `$ARGUMENTS` (starts with `/`, `~`, or `./`), replace the first line with `P="<that argument>"` and run the same three lines. Never change the filename between runs; the stable bookmark depends on it.
+- Each run **overwrites** the same output file so the rep can bookmark it once and reopen it every morning to see fresh numbers. Resolve the output path as follows:
+  1. If the user passed a path in `$ARGUMENTS` (starts with `/`, `~`, or `./`), use that as the target.
+  2. Otherwise, call `request_cowork_directory` to mount `~/Desktop` — this ensures writes land on the user's real local filesystem, not inside a cloud sandbox. Then use the mounted path + `Claude/Dashboard/sales-dashboard.html` as the target.
+  3. Once you have the target path, resolve it via Bash:
+     ```bash
+     P="<target path>"
+     mkdir -p "$(dirname "$P")"
+     printf '%s' "$P"
+     ```
+     Use the printed absolute path as the `file_path` argument to Write. The Write tool does not expand `$HOME`, `${HOME}`, or `~` — it needs a literal resolved path.
+  4. Never change the filename between runs; the stable bookmark depends on it.
 - After writing the file, also print a plain-text summary of the same numbers to chat so the rep sees results without opening the file.
 - This skill is personalised to the invoker. All metrics are scoped to **the person running the skill** — never aggregate across the team.
 

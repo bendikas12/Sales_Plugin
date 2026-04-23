@@ -65,16 +65,16 @@ The `dealstage` field returns an internal ID. Prefer filtering on these IDs rath
 
 | Stage label | `dealstage` ID |
 |---|---|
-| Discovery / Demo Scheduled | `TODO_FILL_IN` |
-| Solution Qualification / Demo conducted | `TODO_FILL_IN` |
-| Business Case Validation | `TODO_FILL_IN` |
-| Commercial Alignment | `TODO_FILL_IN` |
-| Pre-Onboarding | `TODO_FILL_IN` |
-| Submitted to credit | `TODO_FILL_IN` |
-| Info requested | `TODO_FILL_IN` |
-| Info partially obtained | `TODO_FILL_IN` |
-| Info fully obtained | `TODO_FILL_IN` |
-| Submitted to partner bank | `TODO_FILL_IN` |
+| Discovery / Demo Scheduled | `16177356` |
+| Solution Qualification / Demo conducted | `16177357` |
+| Business Case Validation | `4148324547` |
+| Commercial Alignment | `4148324548` |
+| Pre-Onboarding | `4148324549` |
+| Submitted to credit | `1515896` |
+| Info requested | `1515897` |
+| Info partially obtained | `35178338` |
+| Info fully obtained | `1515898` |
+| Submitted to partner bank | `1515899` |
 | Account activated | `16177379` |
 | Closed Lost | `16258181` |
 | Churned | `30637484` |

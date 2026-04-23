@@ -118,7 +118,7 @@ Use the Google Calendar MCP to list events on the rep's primary calendar between
 - A meeting is **customer-facing** if it has at least one attendee whose email domain is **not** `@getpliant.com` and is not `resource.calendar.google.com` (room resources). Exclude declines. Count → `CUSTOMER_FACING_MEETINGS`.
 
 ### HubSpot sales pipeline
-Use `search_crm_objects` with `objectType: "Object"` (deal). **All filters ANDed in a single filter group**:
+Use `search_crm_objects` with `objectType: "Deal"`. **All filters ANDed in a single filter group**:
 - `hubspot_owner_id` EQ `REP.hubspot_owner_id`
 - `pipeline` EQ `"16177355"` (Sales Pipeline — see `${CLAUDE_PLUGIN_ROOT}/references/hubspot-glossary.md`)
 - `dealstage` NOT IN (`"16177379"`, `"16258181"`, `"30637484"`) — these are **Account activated**, **Closed Lost**, **Churned** respectively. Filter on the numeric `dealstage` ID, not on the `name_of_deal_stage` text label: IDs are stable across label renames and localisations. These IDs are hardcoded here on purpose — do not attempt to look them up or guess them.
@@ -199,7 +199,7 @@ Measures how many deals *moved through* key funnel gates in the rolling last 30 
 
   If any of the three cannot be resolved, render that metric as `N/A` and add a note in the chat summary — **do not guess** an internal name and do not fall back to `name_of_deal_stage` filtering (which would measure current stage, not throughput, and give a wrong answer).
 
-**Then run three `search_crm_objects` fetches in parallel** — one per metric — on `objectType: "Object"` (deal). Each uses a single ANDed filter group:
+**Then run three `search_crm_objects` fetches in parallel** — one per metric — on `objectType: "Deal"`. Each uses a single ANDed filter group:
 - `hubspot_owner_id` EQ `REP.hubspot_owner_id`
 - `pipeline` EQ `"16177355"` (Sales Pipeline)
 - `<stage-entered timestamp property>` GTE `LAST_30_START` AND `<same>` LTE `LAST_30_END`

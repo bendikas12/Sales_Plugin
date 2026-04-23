@@ -87,11 +87,9 @@ HubSpot (Pliant custom) exposes per-stage "date entered" timestamp properties on
 
 | Stage label | Internal name |
 |---|---|
-| Discovery / Demo Scheduled | `TODO_DISCOVER_AT_RUNTIME` |
-| Submitted to credit | `TODO_DISCOVER_AT_RUNTIME` |
-| Account activated | `TODO_DISCOVER_AT_RUNTIME` |
-
-Rows marked `TODO_DISCOVER_AT_RUNTIME` must be resolved via `search_properties` on the `Deal` object, filtered by internal name prefix `deal_stage_timestamp` and matched against the stage label above. Skills that need these should discover them at runtime and can optionally cache the resolved names back into this table in a follow-up change.
+| Discovery / Demo Scheduled | `deal_stage_timestamp__demo_scheduled` |
+| Submitted to credit | `deal_stage_timestamp__registered` |
+| Account activated | `deal_stage_timestamp__account_activated` |
 
 ## Deal stage meanings
 

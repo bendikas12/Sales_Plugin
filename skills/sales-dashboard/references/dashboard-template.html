@@ -172,6 +172,27 @@
     </div>
   </div>
 
+  <div class="section-title">Last 30 days — funnel throughput</div>
+  <div class="grid">
+    <div class="card">
+      <div class="label">Demos scheduled</div>
+      <div class="value accent">{{DEMO_SCHEDULED_30D}}</div>
+      <div class="sub">Deals that entered Discovery / Demo Scheduled in the last 30 days</div>
+    </div>
+
+    <div class="card">
+      <div class="label">Submitted to credit — expected volume</div>
+      <div class="value accent">{{SUBMITTED_CREDIT_30D_VOL}}</div>
+      <div class="sub">Sum of expected_monthly_transaction_volume for deals that entered Submitted to credit in the last 30 days</div>
+    </div>
+
+    <div class="card">
+      <div class="label">Account activated — expected volume</div>
+      <div class="value ok">{{ACCOUNT_ACTIVATED_30D_VOL}}</div>
+      <div class="sub">Sum of expected_monthly_transaction_volume for deals that activated in the last 30 days</div>
+    </div>
+  </div>
+
   <div class="section-title">Pipeline by stage</div>
   <div class="card chart-card">
     <div class="label">Total addressable volume by deal stage</div>

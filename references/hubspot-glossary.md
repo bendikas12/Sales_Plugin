@@ -61,13 +61,33 @@ The `pipeline` field returns a numeric ID. Use this table to resolve it to a nam
 
 The `dealstage` field returns an internal ID. Prefer filtering on these IDs rather than `name_of_deal_stage` labels — IDs are stable across label renames and localisations.
 
+### Sales Pipeline (`16177355`)
+
 | Stage label | `dealstage` ID |
 |---|---|
+| Discovery / Demo Scheduled | `16177356` |
+| Solution Qualification / Demo conducted | `16177357` |
+| Business Case Validation | `4148324547` |
+| Commercial Alignment | `4148324548` |
+| Pre-Onboarding | `4148324549` |
+| Submitted to credit | `1515896` |
+| Info requested | `1515897` |
+| Info partially obtained | `35178338` |
+| Info fully obtained | `1515898` |
+| Submitted to partner bank | `1515899` |
 | Account activated | `16177379` |
 | Closed Lost | `16258181` |
 | Churned | `30637484` |
 
-Additional stage IDs can be added here as other skills need them.
+## Stage-entered timestamp properties
+
+HubSpot (Pliant custom) exposes per-stage "date entered" timestamp properties on deals with internal names of the form `deal_stage_timestamp_<something>`. Use these to filter deals by when they *entered* a stage, regardless of where they are now.
+
+| Stage label | Internal name |
+|---|---|
+| Discovery / Demo Scheduled | `deal_stage_timestamp__demo_scheduled` |
+| Submitted to credit | `deal_stage_timestamp__registered` |
+| Account activated | `deal_stage_timestamp__account_activated` |
 
 ## Deal stage meanings
 

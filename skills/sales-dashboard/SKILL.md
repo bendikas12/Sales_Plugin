@@ -226,6 +226,8 @@ print(int(total))
 
 Format the volume tokens with the rep's currency if known (else EUR) and thousand separators, e.g. `€450,000`. Null / missing values are treated as 0 by the script — don't warn, some deals legitimately have no expected volume filled in yet.
 
+**Note on field choice:** the existing pipeline card sums `total_addressable_monthly_transaction_volume` (TAM — the ceiling a customer *could* spend). These new metrics sum `expected_monthly_transaction_volume` (the forecast a rep actually expects). Both fields are on the same deals; they are deliberately different numbers and the dashboard surfaces both — do not swap them.
+
 ---
 
 ## Step 4 — Render the dashboard

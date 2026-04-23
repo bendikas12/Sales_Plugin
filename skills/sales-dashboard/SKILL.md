@@ -232,41 +232,24 @@ Format the volume tokens with the rep's currency if known (else EUR) and thousan
 
 ## Step 4 — Render the dashboard
 
-Collect all token values into a single JSON object and pipe it through the render script.
-Do NOT read the HTML template yourself — the script handles reading and writing.
-
-```bash
-cat <<'TOKENS_EOF' | python3 "${CLAUDE_PLUGIN_ROOT}/skills/sales-dashboard/references/render_dashboard.py" \
-  "${CLAUDE_PLUGIN_ROOT}/skills/sales-dashboard/references/dashboard-template.html" \
-  "<RESOLVED_OUTPUT_PATH>"
-{
-  "REP_NAME": "<value>",
-  "REP_EMAIL": "<value>",
-  "DATE": "<YYYY-MM-DD>",
-  "GENERATED_AT": "<ISO 8601>",
-  "CALLS_WEEK": "<value>",
-  "CALLS_MONTH": "<value>",
-  "CALLS_LAST_30": "<value>",
-  "CALLS_PRIOR_30": "<value>",
-  "CALLS_DELTA_PCT": "<value>",
-  "CALLS_DELTA_CLASS": "<ok or bad>",
-  "EMAILS_WEEK": "<value>",
-  "EMAILS_MONTH": "<value>",
-  "OVERDUE_TASKS": "<value>",
-  "UNREAD_EMAILS": "<value>",
-  "MEETINGS_TODAY": "<value>",
-  "CUSTOMER_FACING_MEETINGS": "<value>",
-  "PIPELINE_DEALS": "<value>",
-  "TAM_VOLUME": "<value>",
-  "DEMO_SCHEDULED_30D": "<value>",
-  "SUBMITTED_CREDIT_30D_VOL": "<value>",
-  "ACCOUNT_ACTIVATED_30D_VOL": "<value>",
-  "PIPELINE_STAGE_DATA_JSON": <raw JSON array, no quotes>
-}
-TOKENS_EOF
-```
-
-Note: `PIPELINE_STAGE_DATA_JSON` must be the raw JSON array (not a string). Use the output of the stage-data Python script directly.
+1. Read `${CLAUDE_PLUGIN_ROOT}/skills/sales-dashboard/references/dashboard-template.html`.
+2. Substitute every `{{TOKEN}}`. Full list:
+   - `{{REP_NAME}}`, `{{REP_EMAIL}}`
+   - `{{DATE}}` — `YYYY-MM-DD`
+   - `{{GENERATED_AT}}` — ISO 8601 with timezone
+   - `{{CALLS_WEEK}}`, `{{CALLS_MONTH}}`
+   - `{{CALLS_LAST_30}}`, `{{CALLS_PRIOR_30}}`
+   - `{{CALLS_DELTA_PCT}}` — pre-formatted with sign / `new` / `—` (never bare number)
+   - `{{CALLS_DELTA_CLASS}}` — either `ok` or `bad`; substituted into a CSS class, never rendered as text
+   - `{{EMAILS_WEEK}}`, `{{EMAILS_MONTH}}`
+   - `{{OVERDUE_TASKS}}`
+   - `{{UNREAD_EMAILS}}`
+   - `{{MEETINGS_TODAY}}`, `{{CUSTOMER_FACING_MEETINGS}}`
+   - `{{PIPELINE_DEALS}}`, `{{TAM_VOLUME}}`
+   - `{{DEMO_SCHEDULED_30D}}` — integer count
+   - `{{SUBMITTED_CREDIT_30D_VOL}}`, `{{ACCOUNT_ACTIVATED_30D_VOL}}` — pre-formatted currency strings
+   - `{{PIPELINE_STAGE_DATA_JSON}}` — raw JSON array, inlined as a JS literal (no surrounding quotes)
+3. Write the result to the **absolute path resolved in the Output rules** (the `echo`ed value from the bash block). Use the Write tool — it overwrites existing files by design, which is what the rep's bookmark relies on. Do not re-derive the path here; reuse the one already computed.
 
 ---
 

@@ -166,9 +166,9 @@
     </div>
 
     <div class="card">
-      <div class="label">Total addressable volume</div>
-      <div class="value accent">{{TAM_VOLUME}}</div>
-      <div class="sub">Sum of Total Addressable Monthly Transaction Volume across open deals</div>
+      <div class="label">Expected volume</div>
+      <div class="value accent">{{EXPECTED_VOLUME}}</div>
+      <div class="sub">Sum of Expected Monthly Transaction Volume across open deals</div>
     </div>
   </div>
 
@@ -195,9 +195,9 @@
 
   <div class="section-title">Pipeline by stage</div>
   <div class="card chart-card">
-    <div class="label">Total addressable volume by deal stage</div>
+    <div class="label">Expected volume by deal stage</div>
     <div class="canvas-wrap"><canvas id="pipelineByStage"></canvas></div>
-    <div class="sub">Sum of Total Addressable Monthly Transaction Volume per stage, ordered by funnel position (excludes Account activated, Churned, Closed Lost)</div>
+    <div class="sub">Sum of Expected Monthly Transaction Volume per stage, ordered by funnel position (excludes Account activated, Churned, Closed Lost)</div>
   </div>
 
   <footer>
@@ -218,8 +218,8 @@
         data: {
           labels: stageData.map(d => d.stage),
           datasets: [{
-            label: 'TAM',
-            data: stageData.map(d => d.tam),
+            label: 'Expected volume',
+            data: stageData.map(d => d.expected),
             backgroundColor: '#6ea8ff',
             borderRadius: 4,
             maxBarThickness: 56,

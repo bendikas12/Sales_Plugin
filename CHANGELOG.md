@@ -1,3 +1,6 @@
+## 0.14.0 - 2026-04-23
+- Changed: sales-dashboard pipeline card and by-stage chart now sum `expected_monthly_transaction_volume` (rep-forecasted) instead of `total_addressable_monthly_transaction_volume` (ceiling). UI labels switched from "Total addressable volume" to "Expected volume". Token renamed `{{TAM_VOLUME}}` → `{{EXPECTED_VOLUME}}`; the by-stage chart JSON key renamed `tam` → `expected` and the Chart.js dataset label renamed accordingly. Chat summary now prints `Expected volume` instead of `TAM volume`. Removed the "Note on field choice" paragraph from the skill since all three volume metrics (pipeline card + submitted-to-credit + activated) now use the same underlying field.
+
 ## 0.13.1 - 2026-04-23
 - Updated: Switched in dashboard skill from it to look for "Object: Object" to "Object: Deal" which is now correct
 

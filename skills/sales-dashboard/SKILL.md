@@ -54,19 +54,43 @@ Use the rep's local timezone (infer from Gmail profile or Calendar; fall back to
 - `TODAY_END` = 23:59:59 local, today
 - `WEEK_START` = Monday 00:00 of the current ISO week
 - `MONTH_START` = 1st of the current calendar month, 00:00
+- `LAST_30_START` = `TODAY_START` − 30 days
+- `LAST_30_END` = `NOW` (rolling, inclusive of today)
+- `PRIOR_30_START` = `TODAY_START` − 60 days
+- `PRIOR_30_END` = `LAST_30_START` − 1 ms (exclusive upper bound so the two windows don't double-count a call on the boundary)
 - `NOW` = current timestamp
 
 Record these as timestamps for filter use. Also compute `GENERATED_AT` (ISO 8601, local tz) for the footer.
+
+The rolling 30-day windows intentionally do **not** align with `WEEK_START` / `MONTH_START` — they are calendar-independent so the rep gets a fair week-to-week trend comparison. That also means you **cannot** reuse `CALLS_WEEK` or `CALLS_MONTH` to derive them; separate fetches are strictly required (see Step 3).
 
 ---
 
 ## Step 3 — Fetch metrics (run in parallel where possible)
 
 ### HubSpot calls
-Use `search_crm_objects` with `objectType: "Call"` and filters:
-- `hubspot_owner_id` = `REP.hubspot_owner_id`
-- `hs_timestamp` ≥ `WEEK_START` → count → `CALLS_WEEK`
-- Repeat with `hs_timestamp` ≥ `MONTH_START` → count → `CALLS_MONTH`
+Use `search_crm_objects` with `objectType: "Call"`. Each request uses a single ANDed filter group:
+- `hubspot_owner_id` EQ `REP.hubspot_owner_id`
+- `hs_timestamp` GTE `<start ms>` AND `hs_timestamp` LTE `<end ms>`
+
+Run four requests — one per bucket — and read the count from each:
+
+| Token | Start | End |
+| --- | --- | --- |
+| `CALLS_WEEK` | `WEEK_START` | `NOW` |
+| `CALLS_MONTH` | `MONTH_START` | `NOW` |
+| `CALLS_LAST_30` | `LAST_30_START` | `LAST_30_END` |
+| `CALLS_PRIOR_30` | `PRIOR_30_START` | `PRIOR_30_END` |
+
+Do **not** try to derive `CALLS_LAST_30` or `CALLS_PRIOR_30` from `CALLS_WEEK` / `CALLS_MONTH` — the buckets are bounded differently (ISO-week / calendar-month vs rolling 30 days) and the numbers will not match. Only these four fetches are needed for calls; do not add more.
+
+**Compute the trend delta** (used to render the "Last 30d vs Prior 30d" subline on the Calls card):
+- `CALLS_DELTA_ABS` = `CALLS_LAST_30 − CALLS_PRIOR_30` (signed integer).
+- `CALLS_DELTA_PCT`:
+  - If `CALLS_PRIOR_30 == 0` and `CALLS_LAST_30 == 0` → `"—"`.
+  - If `CALLS_PRIOR_30 == 0` and `CALLS_LAST_30 > 0` → `"new"` (no prior baseline to compare against).
+  - Else → `round((CALLS_LAST_30 − CALLS_PRIOR_30) / CALLS_PRIOR_30 × 100)` with a leading sign, e.g. `+24%`, `-15%`, `0%`.
+- `CALLS_DELTA_CLASS` = `"ok"` when `CALLS_DELTA_ABS ≥ 0`, `"bad"` when `CALLS_DELTA_ABS < 0`. Matches the existing `--ok` / `--bad` CSS tokens in the template.
 
 ### HubSpot emails sent
 Use `search_crm_objects` with `objectType: "Emails"` (HubSpot engagement type). **All filters below must be ANDed inside a single filter group**:
@@ -172,6 +196,9 @@ print(json.dumps([{"stage": s, "tam": int(v)} for s, v in ordered]))
    - `{{DATE}}` — `YYYY-MM-DD`
    - `{{GENERATED_AT}}` — ISO 8601 with timezone
    - `{{CALLS_WEEK}}`, `{{CALLS_MONTH}}`
+   - `{{CALLS_LAST_30}}`, `{{CALLS_PRIOR_30}}`
+   - `{{CALLS_DELTA_PCT}}` — pre-formatted with sign / `new` / `—` (never bare number)
+   - `{{CALLS_DELTA_CLASS}}` — either `ok` or `bad`; substituted into a CSS class, never rendered as text
    - `{{EMAILS_WEEK}}`, `{{EMAILS_MONTH}}`
    - `{{OVERDUE_TASKS}}`
    - `{{UNREAD_EMAILS}}`
@@ -191,6 +218,7 @@ Sales Dashboard — <REP_NAME> — <DATE>
 
 HubSpot activity
   Calls logged     week <CALLS_WEEK>   month <CALLS_MONTH>
+  Calls trend      last 30d <CALLS_LAST_30> vs prior 30d <CALLS_PRIOR_30>  (<CALLS_DELTA_PCT>)
   Emails sent      week <EMAILS_WEEK>  month <EMAILS_MONTH>
   Overdue tasks    <OVERDUE_TASKS>
 

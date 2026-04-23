@@ -1,5 +1,5 @@
 ---
-description: Render the rep's daily sales dashboard — HubSpot calls/emails this week & month, overdue HubSpot tasks, Gmail unread count, today's meetings (with customer-facing count), and open pipeline deals with total addressable volume. Uses a fixed HTML template overwritten each run so a scheduled job always produces the same file.
+description: Render the rep's daily sales dashboard — HubSpot calls/emails this week & month, overdue HubSpot tasks, Gmail unread count, today's meetings (with customer-facing count), and open pipeline deals with expected volume. Uses a fixed HTML template overwritten each run so a scheduled job always produces the same file.
 argument-hint: "[optional output path]"
 ---
 
@@ -122,25 +122,25 @@ Use `search_crm_objects` with `objectType: "Deal"`. **All filters ANDed in a sin
 - `hubspot_owner_id` EQ `REP.hubspot_owner_id`
 - `pipeline` EQ `"16177355"` (Sales Pipeline — see `${CLAUDE_PLUGIN_ROOT}/references/hubspot-glossary.md`)
 - `dealstage` NOT IN (`"16177379"`, `"16258181"`, `"30637484"`) — these are **Account activated**, **Closed Lost**, **Churned** respectively. Filter on the numeric `dealstage` ID, not on the `name_of_deal_stage` text label: IDs are stable across label renames and localisations. These IDs are hardcoded here on purpose — do not attempt to look them up or guess them.
-- Request properties: `dealname`, `dealstage`, `name_of_deal_stage`, `total_addressable_monthly_transaction_volume` (the label is needed to render the by-stage chart — IDs are for filtering, labels are for display)
-- Set `limit: 100` and paginate using the `after` cursor until every page is fetched. After the first response, note `total`; after the loop, assert `len(all_deals) == total` before summing. If the assertion fails, re-fetch once; if it still fails, render `PIPELINE_DEALS` and `TAM_VOLUME` as `N/A` and note the reason in the chat summary.
+- Request properties: `dealname`, `dealstage`, `name_of_deal_stage`, `expected_monthly_transaction_volume` (the label is needed to render the by-stage chart — IDs are for filtering, labels are for display)
+- Set `limit: 100` and paginate using the `after` cursor until every page is fetched. After the first response, note `total`; after the loop, assert `len(all_deals) == total` before summing. If the assertion fails, re-fetch once; if it still fails, render `PIPELINE_DEALS` and `EXPECTED_VOLUME` as `N/A` and note the reason in the chat summary.
 
-**Sum `TAM_VOLUME` programmatically — never by hand.** After all pages are concatenated into a single JSON array of deal objects, pipe that array into a Python one-liner and use its stdout verbatim. Do **not** read individual property values into your own reasoning and add them up — that's how we got a wrong total last time.
+**Sum `EXPECTED_VOLUME` programmatically — never by hand.** After all pages are concatenated into a single JSON array of deal objects, pipe that array into a Python one-liner and use its stdout verbatim. Do **not** read individual property values into your own reasoning and add them up — that's how we got a wrong total last time.
 
 ```bash
 python3 -c '
 import json, sys
 deals = json.load(sys.stdin)
-total = sum(float(d.get("properties", {}).get("total_addressable_monthly_transaction_volume") or 0) for d in deals)
+total = sum(float(d.get("properties", {}).get("expected_monthly_transaction_volume") or 0) for d in deals)
 print(int(total))
 ' <<< "$DEALS_JSON"
 ```
 
-(Equivalent jq works too: `jq '[.[] | (.properties.total_addressable_monthly_transaction_volume // 0 | tonumber)] | add'`.)
+(Equivalent jq works too: `jq '[.[] | (.properties.expected_monthly_transaction_volume // 0 | tonumber)] | add'`.)
 
 Then:
 - `PIPELINE_DEALS` = length of the concatenated deals list (same as `total` from the first page).
-- `TAM_VOLUME` = the integer printed by the script above, formatted with the rep's currency if known (else EUR) and thousand separators, e.g. `€1,245,000`. Null / missing values are treated as 0 by the script — don't warn, some deals legitimately have no TAM yet.
+- `EXPECTED_VOLUME` = the integer printed by the script above, formatted with the rep's currency if known (else EUR) and thousand separators, e.g. `€1,245,000`. Null / missing values are treated as 0 by the script — don't warn, some deals legitimately have no expected volume yet.
 
 **Also compute `PIPELINE_STAGE_DATA_JSON` — the data for the by-stage chart.** Same rule: do it programmatically, don't hand-pick. Pipe the same concatenated deals JSON through this script and use its stdout verbatim:
 
@@ -170,8 +170,8 @@ by_stage = defaultdict(float)
 for d in deals:
     props = d.get("properties", {}) or {}
     stage = props.get("name_of_deal_stage") or "Unknown"
-    tam = float(props.get("total_addressable_monthly_transaction_volume") or 0)
-    by_stage[stage] += tam
+    expected = float(props.get("expected_monthly_transaction_volume") or 0)
+    by_stage[stage] += expected
 
 # Emit EVERY canonical stage, with 0 if no deals land there — the rep
 # needs to see the empty stages in the chart so the funnel shape is
@@ -180,11 +180,11 @@ known = [(s, by_stage.get(s, 0.0)) for s in STAGE_ORDER]
 unknown = sorted((s, v) for s, v in by_stage.items() if s not in STAGE_ORDER)
 ordered = known + unknown
 
-print(json.dumps([{"stage": s, "tam": int(v)} for s, v in ordered]))
+print(json.dumps([{"stage": s, "expected": int(v)} for s, v in ordered]))
 ' <<< "$DEALS_JSON"
 ```
 
-`PIPELINE_STAGE_DATA_JSON` is the raw JSON array printed by the script (e.g. `[{"stage":"Discovery / Demo Scheduled","tam":0},{"stage":"Solution Qualification / Demo conducted","tam":120000}, ...]`). It's inlined **verbatim** into the template's `<script>` block as a JS literal — do not wrap it in quotes, do not pretty-print, do not hand-edit the labels. The script always emits every canonical stage, so an empty pipeline still renders all 10 stage labels on the X axis at height 0 — the rep needs to see the full funnel shape even when stages are empty.
+`PIPELINE_STAGE_DATA_JSON` is the raw JSON array printed by the script (e.g. `[{"stage":"Discovery / Demo Scheduled","expected":0},{"stage":"Solution Qualification / Demo conducted","expected":120000}, ...]`). It's inlined **verbatim** into the template's `<script>` block as a JS literal — do not wrap it in quotes, do not pretty-print, do not hand-edit the labels. The script always emits every canonical stage, so an empty pipeline still renders all 10 stage labels on the X axis at height 0 — the rep needs to see the full funnel shape even when stages are empty.
 
 ### HubSpot deal stage throughput (last 30 days)
 
@@ -213,7 +213,7 @@ Request properties: `dealname`, `expected_monthly_transaction_volume`. Paginate 
 | Account activated — last 30d | `ACCOUNT_ACTIVATED_TS_PROP` | `ACCOUNT_ACTIVATED_30D_VOL` | sum of `expected_monthly_transaction_volume` |
 
 - `DEMO_SCHEDULED_30D` = `len(all_deals)` from the Demo Scheduled fetch (same as `total` from the first page).
-- For the two volume tokens, sum `expected_monthly_transaction_volume` programmatically — never by hand — using the same pattern as `TAM_VOLUME` above, but summing `expected_monthly_transaction_volume` instead of `total_addressable_monthly_transaction_volume`:
+- For the two volume tokens, sum `expected_monthly_transaction_volume` programmatically — never by hand — using the same pattern as `EXPECTED_VOLUME` above:
 
 ```bash
 python3 -c '
@@ -225,8 +225,6 @@ print(int(total))
 ```
 
 Format the volume tokens with the rep's currency if known (else EUR) and thousand separators, e.g. `€450,000`. Null / missing values are treated as 0 by the script — don't warn, some deals legitimately have no expected volume filled in yet.
-
-**Note on field choice:** the existing pipeline card sums `total_addressable_monthly_transaction_volume` (TAM — the ceiling a customer *could* spend). These new metrics sum `expected_monthly_transaction_volume` (the forecast a rep actually expects). Both fields are on the same deals; they are deliberately different numbers and the dashboard surfaces both — do not swap them.
 
 ---
 
@@ -245,7 +243,7 @@ Format the volume tokens with the rep's currency if known (else EUR) and thousan
    - `{{OVERDUE_TASKS}}`
    - `{{UNREAD_EMAILS}}`
    - `{{MEETINGS_TODAY}}`, `{{CUSTOMER_FACING_MEETINGS}}`
-   - `{{PIPELINE_DEALS}}`, `{{TAM_VOLUME}}`
+   - `{{PIPELINE_DEALS}}`, `{{EXPECTED_VOLUME}}`
    - `{{DEMO_SCHEDULED_30D}}` — integer count
    - `{{SUBMITTED_CREDIT_30D_VOL}}`, `{{ACCOUNT_ACTIVATED_30D_VOL}}` — pre-formatted currency strings
    - `{{PIPELINE_STAGE_DATA_JSON}}` — raw JSON array, inlined as a JS literal (no surrounding quotes)
@@ -272,7 +270,7 @@ Inbox & calendar
 
 Sales pipeline
   Active deals     <PIPELINE_DEALS>
-  TAM volume       <TAM_VOLUME>
+  Expected volume  <EXPECTED_VOLUME>
 
 Last 30d throughput
   Demos scheduled   <DEMO_SCHEDULED_30D>

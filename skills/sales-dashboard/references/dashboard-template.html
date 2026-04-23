@@ -115,7 +115,12 @@
         <div class="col"><div class="k">This week</div><div class="v">{{CALLS_WEEK}}</div></div>
         <div class="col"><div class="k">This month</div><div class="v">{{CALLS_MONTH}}</div></div>
       </div>
-      <div class="sub">HubSpot Call engagements owned by you</div>
+      <div class="split">
+        <div class="col"><div class="k">Last 30d</div><div class="v">{{CALLS_LAST_30}}</div></div>
+        <div class="col"><div class="k">Prior 30d</div><div class="v">{{CALLS_PRIOR_30}}</div></div>
+        <div class="col"><div class="k">Δ</div><div class="v {{CALLS_DELTA_CLASS}}">{{CALLS_DELTA_PCT}}</div></div>
+      </div>
+      <div class="sub">HubSpot Call engagements owned by you · Δ compares last 30 days vs days 31–60</div>
     </div>
 
     <div class="card">

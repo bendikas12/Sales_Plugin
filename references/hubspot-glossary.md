@@ -61,13 +61,37 @@ The `pipeline` field returns a numeric ID. Use this table to resolve it to a nam
 
 The `dealstage` field returns an internal ID. Prefer filtering on these IDs rather than `name_of_deal_stage` labels — IDs are stable across label renames and localisations.
 
+### Sales Pipeline (`16177355`)
+
 | Stage label | `dealstage` ID |
 |---|---|
+| Discovery / Demo Scheduled | `TODO_FILL_IN` |
+| Solution Qualification / Demo conducted | `TODO_FILL_IN` |
+| Business Case Validation | `TODO_FILL_IN` |
+| Commercial Alignment | `TODO_FILL_IN` |
+| Pre-Onboarding | `TODO_FILL_IN` |
+| Submitted to credit | `TODO_FILL_IN` |
+| Info requested | `TODO_FILL_IN` |
+| Info partially obtained | `TODO_FILL_IN` |
+| Info fully obtained | `TODO_FILL_IN` |
+| Submitted to partner bank | `TODO_FILL_IN` |
 | Account activated | `16177379` |
 | Closed Lost | `16258181` |
 | Churned | `30637484` |
 
-Additional stage IDs can be added here as other skills need them.
+Rows marked `TODO_FILL_IN` need to be populated from HubSpot (Settings → Objects → Deals → Pipelines → Sales Pipeline, then inspect the stage URL or API). Until populated, skills that need these IDs should either ask the user or fall back to filtering on `name_of_deal_stage` labels.
+
+## Stage-entered timestamp properties
+
+HubSpot (Pliant custom) exposes per-stage "date entered" timestamp properties on deals with internal names of the form `deal_stage_timestamp_<something>`. Use these to filter deals by when they *entered* a stage, regardless of where they are now.
+
+| Stage label | Internal name |
+|---|---|
+| Discovery / Demo Scheduled | `TODO_DISCOVER_AT_RUNTIME` |
+| Submitted to credit | `TODO_DISCOVER_AT_RUNTIME` |
+| Account activated | `TODO_DISCOVER_AT_RUNTIME` |
+
+Rows marked `TODO_DISCOVER_AT_RUNTIME` must be resolved via `search_properties` on the `Deal` object, filtered by internal name prefix `deal_stage_timestamp` and matched against the stage label above. Skills that need these should discover them at runtime and can optionally cache the resolved names back into this table in a follow-up change.
 
 ## Deal stage meanings
 

@@ -186,6 +186,48 @@ print(json.dumps([{"stage": s, "tam": int(v)} for s, v in ordered]))
 
 `PIPELINE_STAGE_DATA_JSON` is the raw JSON array printed by the script (e.g. `[{"stage":"Discovery / Demo Scheduled","tam":0},{"stage":"Solution Qualification / Demo conducted","tam":120000}, ...]`). It's inlined **verbatim** into the template's `<script>` block as a JS literal — do not wrap it in quotes, do not pretty-print, do not hand-edit the labels. The script always emits every canonical stage, so an empty pipeline still renders all 10 stage labels on the X axis at height 0 — the rep needs to see the full funnel shape even when stages are empty.
 
+### HubSpot deal stage throughput (last 30 days)
+
+Measures how many deals *moved through* key funnel gates in the rolling last 30 days — not a snapshot of who's currently in each stage. A deal that entered "Discovery / Demo Scheduled" 10 days ago and has since progressed to "Submitted to credit" still counts toward demos, because the filter is on the stage-*entered* timestamp, not the current `dealstage`.
+
+**First, resolve the 3 stage-entered timestamp property internal names.** HubSpot (Pliant custom) exposes per-stage entry timestamps on deals with internal names of the form `deal_stage_timestamp_<something>`. The exact suffixes are not hardcoded because Pliant can rename / add stages. Consult `${CLAUDE_PLUGIN_ROOT}/references/hubspot-glossary.md` → "Stage-entered timestamp properties" first:
+- If the table has a resolved internal name for the stage, use it.
+- If the table says `TODO_DISCOVER_AT_RUNTIME`, call `search_properties` on the `Deal` object, filter the response to properties whose internal `name` starts with `deal_stage_timestamp`, then match each needed stage by its `label` text (case-insensitive, ignoring punctuation / whitespace):
+  - `Discovery / Demo Scheduled` → `DEMO_SCHEDULED_TS_PROP`
+  - `Submitted to credit` → `SUBMITTED_CREDIT_TS_PROP`
+  - `Account activated` → `ACCOUNT_ACTIVATED_TS_PROP`
+
+  If any of the three cannot be resolved, render that metric as `N/A` and add a note in the chat summary — **do not guess** an internal name and do not fall back to `name_of_deal_stage` filtering (which would measure current stage, not throughput, and give a wrong answer).
+
+**Then run three `search_crm_objects` fetches in parallel** — one per metric — on `objectType: "Object"` (deal). Each uses a single ANDed filter group:
+- `hubspot_owner_id` EQ `REP.hubspot_owner_id`
+- `pipeline` EQ `"16177355"` (Sales Pipeline)
+- `<stage-entered timestamp property>` GTE `LAST_30_START` AND `<same>` LTE `LAST_30_END`
+
+Request properties: `dealname`, `expected_monthly_transaction_volume`. Paginate with `limit: 100` + `after` cursor until exhausted, same pattern as the pipeline fetch. Assert `len(all_deals) == total` from the first response before counting / summing; if the assertion fails, re-fetch once; if it still fails, render the affected metric as `N/A`.
+
+| Metric | Timestamp property | Output token | Output type |
+| --- | --- | --- | --- |
+| Demo scheduled — last 30d | `DEMO_SCHEDULED_TS_PROP` | `DEMO_SCHEDULED_30D` | count of deals |
+| Submitted to credit — last 30d | `SUBMITTED_CREDIT_TS_PROP` | `SUBMITTED_CREDIT_30D_VOL` | sum of `expected_monthly_transaction_volume` |
+| Account activated — last 30d | `ACCOUNT_ACTIVATED_TS_PROP` | `ACCOUNT_ACTIVATED_30D_VOL` | sum of `expected_monthly_transaction_volume` |
+
+- `DEMO_SCHEDULED_30D` = `len(all_deals)` from the Demo Scheduled fetch (same as `total` from the first page).
+- For the two volume tokens, sum `expected_monthly_transaction_volume` programmatically — never by hand — using the same pattern as `TAM_VOLUME` above, but summing `expected_monthly_transaction_volume` instead of `total_addressable_monthly_transaction_volume`:
+
+```bash
+python3 -c '
+import json, sys
+deals = json.load(sys.stdin)
+total = sum(float(d.get("properties", {}).get("expected_monthly_transaction_volume") or 0) for d in deals)
+print(int(total))
+' <<< "$DEALS_JSON"
+```
+
+Format the volume tokens with the rep's currency if known (else EUR) and thousand separators, e.g. `€450,000`. Null / missing values are treated as 0 by the script — don't warn, some deals legitimately have no expected volume filled in yet.
+
+**Note on field choice:** the existing pipeline card sums `total_addressable_monthly_transaction_volume` (TAM — the ceiling a customer *could* spend). These new metrics sum `expected_monthly_transaction_volume` (the forecast a rep actually expects). Both fields are on the same deals; they are deliberately different numbers and the dashboard surfaces both — do not swap them.
+
 ---
 
 ## Step 4 — Render the dashboard
@@ -204,6 +246,8 @@ print(json.dumps([{"stage": s, "tam": int(v)} for s, v in ordered]))
    - `{{UNREAD_EMAILS}}`
    - `{{MEETINGS_TODAY}}`, `{{CUSTOMER_FACING_MEETINGS}}`
    - `{{PIPELINE_DEALS}}`, `{{TAM_VOLUME}}`
+   - `{{DEMO_SCHEDULED_30D}}` — integer count
+   - `{{SUBMITTED_CREDIT_30D_VOL}}`, `{{ACCOUNT_ACTIVATED_30D_VOL}}` — pre-formatted currency strings
    - `{{PIPELINE_STAGE_DATA_JSON}}` — raw JSON array, inlined as a JS literal (no surrounding quotes)
 3. Write the result to the **absolute path resolved in the Output rules** (the `echo`ed value from the bash block). Use the Write tool — it overwrites existing files by design, which is what the rep's bookmark relies on. Do not re-derive the path here; reuse the one already computed.
 
@@ -229,6 +273,11 @@ Inbox & calendar
 Sales pipeline
   Active deals     <PIPELINE_DEALS>
   TAM volume       <TAM_VOLUME>
+
+Last 30d throughput
+  Demos scheduled   <DEMO_SCHEDULED_30D>
+  Submitted credit  <SUBMITTED_CREDIT_30D_VOL>   (expected trx volume)
+  Activated         <ACCOUNT_ACTIVATED_30D_VOL>   (expected trx volume)
 
 Written to: <output path>
 ```

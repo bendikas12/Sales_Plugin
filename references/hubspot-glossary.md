@@ -79,8 +79,6 @@ The `dealstage` field returns an internal ID. Prefer filtering on these IDs rath
 | Closed Lost | `16258181` |
 | Churned | `30637484` |
 
-Rows marked `TODO_FILL_IN` need to be populated from HubSpot (Settings → Objects → Deals → Pipelines → Sales Pipeline, then inspect the stage URL or API). Until populated, skills that need these IDs should either ask the user or fall back to filtering on `name_of_deal_stage` labels.
-
 ## Stage-entered timestamp properties
 
 HubSpot (Pliant custom) exposes per-stage "date entered" timestamp properties on deals with internal names of the form `deal_stage_timestamp_<something>`. Use these to filter deals by when they *entered* a stage, regardless of where they are now.

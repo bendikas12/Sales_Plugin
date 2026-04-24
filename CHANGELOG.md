@@ -1,3 +1,6 @@
+## 0.15.3 - 2026-04-24
+- Changed: sales-dashboard's spend-gap n8n call now sends an empty `chatInput` (`{ "type": "chat", "chatInput": "", "email": "<REP.email>" }`). The workflow is dedicated to spend-gap rows, so any prompt string is noise — only the rep email actually matters.
+
 ## 0.15.2 - 2026-04-24
 - Fixed: sales-dashboard's spend-gap n8n input payload now includes the invoker's email directly in the input object (`{ "type": "chat", "chatInput": "biggest spend gap", "email": "<REP.email>" }`) so the workflow knows which rep to filter the Google Sheet for. Previously the email was passed only as a separate tool argument, which the workflow didn't receive.
 

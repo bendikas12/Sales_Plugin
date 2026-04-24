@@ -226,6 +226,16 @@ print(int(total))
 
 Format the volume tokens with the rep's currency if known (else EUR) and thousand separators, e.g. `€450,000`. Null / missing values are treated as 0 by the script — don't warn, some deals legitimately have no expected volume filled in yet.
 
+### Biggest Spend Gap companies (n8n → Google Sheet)
+
+Load n8n MCP tool schemas with `ToolSearch` keyword `n8n` (prefix varies per env).
+
+1. Execute workflow `WpHzZ6nsAERzp2H5`, mode `production`, input `{ "type": "chat", "chatInput": "Give me my biggest spend gap companies" }`. The workflow is scoped to the invoker — pass `REP.email` (resolved in Step 1) as the `for` / user identity the tool expects; **never hardcode an email**.
+2. Poll `get_execution` with `includeData: false`, backoff 2→4→8s capped at 30s, ceiling ~2 min, until `status != "running"`.
+3. Fetch `get_execution` with `includeData: true, nodeNames: ["Get row(s) in sheet"]`. Rows = that node's output items mapped to their `json` payload.
+4. Transform programmatically into `SPEND_GAP_ROWS_HTML` (never hand-type rows) — same `python3 -c` stdin pattern as `EXPECTED_VOLUME` above. Emit one `<tr>` per row with five `<td>`s in this order: **Name**, **Spending Gap**, **Hubspot Exp Monthly Trx Vol**, **Org Activation Date**, **Max Utilization**. Match sheet headers case-insensitively after stripping non-alphanumerics so minor header renames don't break the table. HTML-escape cell values. Empty cell → `N/A`. Empty rows list → single `<tr><td colspan="5" class="sub">No companies with a recorded spend gap.</td></tr>`.
+5. If the n8n MCP isn't available, workflow status isn't `success`, or the node is missing from `runData`: set `SPEND_GAP_ROWS_HTML` to `<tr><td colspan="5" class="sub">N/A</td></tr>` and add one `Note:` line in the chat summary. Never invent rows.
+
 ---
 
 ## Step 4 — Render the dashboard
@@ -247,6 +257,7 @@ Format the volume tokens with the rep's currency if known (else EUR) and thousan
    - `{{DEMO_SCHEDULED_30D}}` — integer count
    - `{{SUBMITTED_CREDIT_30D_VOL}}`, `{{ACCOUNT_ACTIVATED_30D_VOL}}` — pre-formatted currency strings
    - `{{PIPELINE_STAGE_DATA_JSON}}` — raw JSON array, inlined as a JS literal (no surrounding quotes)
+   - `{{SPEND_GAP_ROWS_HTML}}` — raw `<tr>` rows, inlined verbatim as HTML (no surrounding quotes, no pretty-printing)
 3. Write the result to the **absolute path resolved in the Output rules** (the `echo`ed value from the bash block). Use the Write tool — it overwrites existing files by design, which is what the rep's bookmark relies on. Do not re-derive the path here; reuse the one already computed.
 
 ---
@@ -276,6 +287,10 @@ Last 30d throughput
   Demos scheduled   <DEMO_SCHEDULED_30D>
   Submitted credit  <SUBMITTED_CREDIT_30D_VOL>   (expected trx volume)
   Activated         <ACCOUNT_ACTIVATED_30D_VOL>   (expected trx volume)
+
+Biggest Spend Gap — Companies (top 10)
+  <Name> — gap <Spending Gap> · exp trx vol <Hubspot Exp Monthly Trx Vol> · activated <Org Activation Date> · max util <Max Utilization>
+  ... (one line per row, truncated to 10; full list is in the HTML)
 
 Written to: <output path>
 ```

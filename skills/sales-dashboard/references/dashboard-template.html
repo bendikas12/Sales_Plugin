@@ -92,6 +92,15 @@
     height: 280px;
     margin-top: 4px;
   }
+  .table-card { padding: 20px 24px 16px; margin-top: 4px; }
+  .spend-gap-table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; margin-top: 12px; }
+  .spend-gap-table th, .spend-gap-table td {
+    text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border); font-size: 13px;
+  }
+  .spend-gap-table th {
+    color: var(--muted); font-weight: 500; text-transform: uppercase; letter-spacing: 0.08em; font-size: 11px;
+  }
+  .spend-gap-table tbody tr:last-child td { border-bottom: none; }
   footer {
     margin-top: 32px;
     color: var(--muted);
@@ -198,6 +207,18 @@
     <div class="label">Expected volume by deal stage</div>
     <div class="canvas-wrap"><canvas id="pipelineByStage"></canvas></div>
     <div class="sub">Sum of Expected Monthly Transaction Volume per stage, ordered by funnel position (excludes Account activated, Churned, Closed Lost)</div>
+  </div>
+
+  <div class="section-title">Biggest Spend Gap — Companies</div>
+  <div class="card table-card">
+    <div class="label">Accounts with the largest gap between potential and actual spend</div>
+    <table class="spend-gap-table">
+      <thead>
+        <tr><th>Name</th><th>Spending Gap</th><th>Hubspot Exp Monthly Trx Vol</th><th>Org Activation Date</th><th>Max Utilization</th></tr>
+      </thead>
+      <tbody>{{SPEND_GAP_ROWS_HTML}}</tbody>
+    </table>
+    <div class="sub">Source: n8n workflow <code>WpHzZ6nsAERzp2H5</code> · refreshed each run</div>
   </div>
 
   <footer>

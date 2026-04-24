@@ -1,3 +1,12 @@
+## 0.15.3 - 2026-04-24
+- Changed: sales-dashboard's spend-gap n8n call now sends an empty `chatInput` (`{ "type": "chat", "chatInput": "", "email": "<REP.email>" }`). The workflow is dedicated to spend-gap rows, so any prompt string is noise — only the rep email actually matters.
+
+## 0.15.2 - 2026-04-24
+- Fixed: sales-dashboard's spend-gap n8n input payload now includes the invoker's email directly in the input object (`{ "type": "chat", "chatInput": "biggest spend gap", "email": "<REP.email>" }`) so the workflow knows which rep to filter the Google Sheet for. Previously the email was passed only as a separate tool argument, which the workflow didn't receive.
+
+## 0.15.1 - 2026-04-24
+- Fixed: sales-dashboard's spend-gap n8n call was passing `chatInput: "Give me my biggest spend gap companies"` — the workflow's chat-trigger node routes on the literal phrase `"biggest spend gap"` and returned empty for the long form. SKILL.md now specifies the exact trigger string and explicitly warns not to paraphrase it.
+
 ## 0.15.0 - 2026-04-24
 - Added: sales-dashboard renders a "Biggest Spend Gap — Companies" table at the bottom of the page (below the Pipeline-by-stage chart), fed by n8n workflow `WpHzZ6nsAERzp2H5` (production mode) scoped to the invoker's email (`REP.email`, never hardcoded). Polls `get_execution` with `includeData: false` until `status != "running"`, then fetches `includeData: true, nodeNames: ["Get row(s) in sheet"]` and renders five columns: Name, Spending Gap, Hubspot Exp Monthly Trx Vol, Org Activation Date, Max Utilization. Rows transformed programmatically into `{{SPEND_GAP_ROWS_HTML}}` (never hand-typed) with case-insensitive header matching so minor sheet renames don't break the table. Chat summary gains a matching top-10 block. Renders `N/A` if the n8n MCP is unavailable or the workflow doesn't finish with status `success`.
 

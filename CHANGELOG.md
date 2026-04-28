@@ -1,3 +1,5 @@
+## 0.3.0 - 2026-04-28
+- Added: contact-enrichment skill — enrich a prospect's email, direct dial, LinkedIn, and job title via Amplemarket with Clay/n8n fallback and optional HubSpot update
 ## 0.15.3 - 2026-04-24
 - Changed: sales-dashboard's spend-gap n8n call now sends an empty `chatInput` (`{ "type": "chat", "chatInput": "", "email": "<REP.email>" }`). The workflow is dedicated to spend-gap rows, so any prompt string is noise — only the rep email actually matters.
 

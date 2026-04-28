@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Sales Dashboard — {{REP_NAME}} — {{DATE}}</title>
+<style>
+  :root {
+    --bg: #0e0f13;
+    --card: #171821;
+    --card-hi: #1e2030;
+    --border: #2a2d3d;
+    --text: #e8e9ee;
+    --muted: #8b8fa3;
+    --accent: #6ea8ff;
+    --ok: #4ade80;
+    --warn: #f59e0b;
+    --bad: #ef4444;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    padding: 32px;
+  }
+  header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 28px;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 16px;
+  }
+  header h1 { margin: 0; font-size: 22px; font-weight: 600; letter-spacing: -0.01em; }
+  header .date { color: var(--muted); font-size: 14px; font-variant-numeric: tabular-nums; }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 16px;
+  }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .card .label {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+  }
+  .card .value {
+    font-size: 34px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    line-height: 1.1;
+  }
+  .card .sub {
+    font-size: 13px;
+    color: var(--muted);
+  }
+  .card .split {
+    display: flex;
+    gap: 24px;
+    margin-top: 4px;
+  }
+  .card .split .col { display: flex; flex-direction: column; gap: 2px; }
+  .card .split .col .k { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+  .card .split .col .v { font-size: 22px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .section-title {
+    margin: 28px 0 12px;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+  }
+  .accent { color: var(--accent); }
+  .warn { color: var(--warn); }
+  .bad { color: var(--bad); }
+  .ok { color: var(--ok); }
+  .chart-card {
+    padding: 20px 24px 16px;
+    margin-top: 4px;
+  }
+  .chart-card .canvas-wrap {
+    position: relative;
+    height: 280px;
+    margin-top: 4px;
+  }
+  .table-card { padding: 20px 24px 16px; margin-top: 4px; }
+  .spend-gap-table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; margin-top: 12px; }
+  .spend-gap-table th, .spend-gap-table td {
+    text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border); font-size: 13px;
+  }
+  .spend-gap-table th {
+    color: var(--muted); font-weight: 500; text-transform: uppercase; letter-spacing: 0.08em; font-size: 11px;
+  }
+  .spend-gap-table tbody tr:last-child td { border-bottom: none; }
+  footer {
+    margin-top: 32px;
+    color: var(--muted);
+    font-size: 12px;
+    border-top: 1px solid var(--border);
+    padding-top: 12px;
+  }
+</style>
+</head>
+<body>
+  <header>
+    <h1>Sales Dashboard — {{REP_NAME}}</h1>
+    <span class="date">{{DATE}}</span>
+  </header>
+
+  <div class="section-title">HubSpot activity</div>
+  <div class="grid">
+    <div class="card">
+      <div class="label">Calls logged</div>
+      <div class="split">
+        <div class="col"><div class="k">This week</div><div class="v">{{CALLS_WEEK}}</div></div>
+        <div class="col"><div class="k">This month</div><div class="v">{{CALLS_MONTH}}</div></div>
+      </div>
+      <div class="split">
+        <div class="col"><div class="k">Last 30d</div><div class="v">{{CALLS_LAST_30}}</div></div>
+        <div class="col"><div class="k">Prior 30d</div><div class="v">{{CALLS_PRIOR_30}}</div></div>
+        <div class="col"><div class="k">Δ</div><div class="v {{CALLS_DELTA_CLASS}}">{{CALLS_DELTA_PCT}}</div></div>
+      </div>
+      <div class="sub">HubSpot Call engagements owned by you · Δ compares last 30 days vs days 31–60</div>
+    </div>
+
+    <div class="card">
+      <div class="label">Emails sent</div>
+      <div class="split">
+        <div class="col"><div class="k">This week</div><div class="v">{{EMAILS_WEEK}}</div></div>
+        <div class="col"><div class="k">This month</div><div class="v">{{EMAILS_MONTH}}</div></div>
+      </div>
+      <div class="sub">Outbound Email engagements logged in HubSpot</div>
+    </div>
+
+    <div class="card">
+      <div class="label">Overdue tasks</div>
+      <div class="value warn">{{OVERDUE_TASKS}}</div>
+      <div class="sub">HubSpot tasks past due, assigned to you</div>
+    </div>
+  </div>
+
+  <div class="section-title">Inbox &amp; calendar</div>
+  <div class="grid">
+    <div class="card">
+      <div class="label">Unread emails</div>
+      <div class="value">{{UNREAD_EMAILS}}</div>
+      <div class="sub">Gmail — unread in primary inbox</div>
+    </div>
+
+    <div class="card">
+      <div class="label">Meetings today</div>
+      <div class="split">
+        <div class="col"><div class="k">Total</div><div class="v">{{MEETINGS_TODAY}}</div></div>
+        <div class="col"><div class="k">Customer-facing</div><div class="v accent">{{CUSTOMER_FACING_MEETINGS}}</div></div>
+      </div>
+      <div class="sub">Customer-facing = at least one external attendee</div>
+    </div>
+  </div>
+
+  <div class="section-title">Sales pipeline</div>
+  <div class="grid">
+    <div class="card">
+      <div class="label">Open deals</div>
+      <div class="value">{{PIPELINE_DEALS}}</div>
+      <div class="sub">Excludes Account activated, Churned, Closed lost</div>
+    </div>
+
+    <div class="card">
+      <div class="label">Expected volume</div>
+      <div class="value accent">{{EXPECTED_VOLUME}}</div>
+      <div class="sub">Sum of Expected Monthly Transaction Volume across open deals</div>
+    </div>
+  </div>
+
+  <div class="section-title">Last 30 days — funnel throughput</div>
+  <div class="grid">
+    <div class="card">
+      <div class="label">Demos scheduled</div>
+      <div class="value accent">{{DEMO_SCHEDULED_30D}}</div>
+      <div class="sub">Deals that entered Discovery / Demo Scheduled in the last 30 days</div>
+    </div>
+
+    <div class="card">
+      <div class="label">Submitted to credit — expected volume</div>
+      <div class="value accent">{{SUBMITTED_CREDIT_30D_VOL}}</div>
+      <div class="sub">Sum of Expected Monthly Transaction Volume for deals that entered Submitted to credit in the last 30 days</div>
+    </div>
+
+    <div class="card">
+      <div class="label">Account activated — expected volume</div>
+      <div class="value ok">{{ACCOUNT_ACTIVATED_30D_VOL}}</div>
+      <div class="sub">Sum of Expected Monthly Transaction Volume for deals that activated in the last 30 days</div>
+    </div>
+  </div>
+
+  <div class="section-title">Pipeline by stage</div>
+  <div class="card chart-card">
+    <div class="label">Expected volume by deal stage</div>
+    <div class="canvas-wrap"><canvas id="pipelineByStage"></canvas></div>
+    <div class="sub">Sum of Expected Monthly Transaction Volume per stage, ordered by funnel position (excludes Account activated, Churned, Closed Lost)</div>
+  </div>
+
+  <div class="section-title">Biggest Spend Gap — Companies</div>
+  <div class="card table-card">
+    <div class="label">Accounts with the largest gap between potential and actual spend</div>
+    <table class="spend-gap-table">
+      <thead>
+        <tr><th>Name</th><th>Spending Gap</th><th>Hubspot Exp Monthly Trx Vol</th><th>Org Activation Date</th><th>Max Utilization</th></tr>
+      </thead>
+      <tbody>{{SPEND_GAP_ROWS_HTML}}</tbody>
+    </table>
+    <div class="sub">Source: n8n workflow <code>WpHzZ6nsAERzp2H5</code> · refreshed each run</div>
+  </div>
+
+  <footer>
+    Generated {{GENERATED_AT}} · Sales Plugin · Rep: {{REP_EMAIL}}
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script>
+    const stageData = {{PIPELINE_STAGE_DATA_JSON}};
+    const fmtEUR = v => '€' + Math.round(v).toLocaleString('en-US');
+    const fmtAxis = v => v >= 1_000_000 ? '€' + (v / 1_000_000).toFixed(1) + 'M'
+                       : v >= 1_000     ? '€' + Math.round(v / 1_000) + 'k'
+                       : '€' + v;
+    const canvas = document.getElementById('pipelineByStage');
+    if (canvas && window.Chart && Array.isArray(stageData) && stageData.length) {
+      new Chart(canvas.getContext('2d'), {
+        type: 'bar',
+        data: {
+          labels: stageData.map(d => d.stage),
+          datasets: [{
+            label: 'Expected volume',
+            data: stageData.map(d => d.expected),
+            backgroundColor: '#6ea8ff',
+            borderRadius: 4,
+            maxBarThickness: 56,
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: ctx => fmtEUR(ctx.parsed.y)
+              },
+              backgroundColor: '#1e2030',
+              borderColor: '#2a2d3d',
+              borderWidth: 1,
+              titleColor: '#e8e9ee',
+              bodyColor: '#e8e9ee',
+            }
+          },
+          scales: {
+            x: {
+              ticks: { color: '#8b8fa3', autoSkip: false, maxRotation: 30, minRotation: 0 },
+              grid: { color: 'transparent' }
+            },
+            y: {
+              beginAtZero: true,
+              ticks: { color: '#8b8fa3', callback: fmtAxis },
+              grid: { color: '#2a2d3d' }
+            }
+          }
+        }
+      });
+    }
+  </script>
+</body>
+</html>

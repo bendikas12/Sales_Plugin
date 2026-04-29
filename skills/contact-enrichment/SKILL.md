@@ -1,18 +1,19 @@
 ---
 name: contact-enrichment
-description: Enrich a prospect's contact data via Amplemarket (email, direct dial, LinkedIn, job title) then optionally update HubSpot. Use when prospecting a new contact and you need their contact details.
+description: Enrich a prospect's contact data via Amplemarket (email, direct dial, LinkedIn, job title) with Clay/n8n and web search fallbacks. Use when prospecting a new contact and you need their contact details.
 ---
 
 # Contact Enrichment Skill
 
 ## Purpose
-Given a person's name and company, find their email, direct dial phone, LinkedIn URL, and job title.
-Primary source: Amplemarket. Fallback: n8n/Clay enrichment workflow. Then optionally update HubSpot.
+Given a person's name and company (or a LinkedIn URL), find their email, direct dial phone, LinkedIn URL, and job title.
+Sources in order: Amplemarket → n8n/Clay → Web search.
+Output is a structured brief. HubSpot is never updated automatically.
 
 ## Input
 Ask the user for (if not already provided):
-- First name + Last name
-- Company name
+- First name + Last name + Company name
+- OR a LinkedIn URL directly (skips Amplemarket person search, goes straight to n8n/Clay)
 - (Optional) Company domain
 
 ---
@@ -23,15 +24,15 @@ Use `mcp__amplemarket__find_person` with `reveal_email: true`.
 
 If no result or empty response, try `mcp__amplemarket__search_people` using company name and person name.
 
-**Retry rule**: if the response says "Enrichment is still processing" or similar, retry up to 3 times before moving on.
+**Retry rule**: if the response says "Enrichment is still processing", retry up to 3 times before moving on.
 
-Capture from the result:
+Capture:
 - `email` — work email address
-- `phone` — **direct dial only** (personal mobile or direct work line). If the number found is a company HQ/switchboard number, do NOT capture it as the person's phone — store it separately as `companyPhone` for reference only.
+- `phone` — **direct dial only** (personal mobile or direct work line). If the number is a company HQ/switchboard, do NOT capture it as a person phone — store it as `companyPhone` for Step 2 reference only.
 - `linkedin_url` — LinkedIn profile URL
-- `job_title` — the person's current title
+- `job_title` — current title
 
-**Phone rule**: only set `directDial` if the phone is confirmed as a direct/mobile number. A company main line must never be written to the contact's phone field in HubSpot.
+If the user provided a LinkedIn URL directly as input, skip Step 1 and go to Step 3.
 
 ---
 
@@ -40,16 +41,18 @@ Capture from the result:
 Use `mcp__amplemarket__find_company` with domain (preferred) or company name.
 
 Capture only:
-- `company_domain` — the company's website domain
-- `company_phone` — HQ/switchboard number (shown for reference only, never written to the contact record in HubSpot)
+- `company_domain`
+- `company_phone` — HQ/switchboard (shown in brief for reference, never written to HubSpot contact)
 
 ---
 
-## Step 3 — n8n/Clay Fallback (if Step 1 returns no useful data)
+## Step 3 — n8n/Clay Fallback
 
-Trigger when: Amplemarket returned no email AND no direct dial (LinkedIn URL alone is not enough to skip fallback).
+**Trigger when**: Step 1 returned no email AND no direct dial (a LinkedIn URL alone is not enough to skip this step).
 
-Make an HTTP POST to the n8n enrichment webhook:
+Also trigger here directly if the user provided a LinkedIn URL as input (skipping Step 1).
+
+POST to the n8n enrichment webhook:
 
 **URL**: `https://getpliant.app.n8n.cloud/webhook/contact-enrichment`
 
@@ -60,43 +63,46 @@ Make an HTTP POST to the n8n enrichment webhook:
   "lastName": "<last name>",
   "company": "<company name>",
   "domain": "<company domain or empty string>",
-  "linkedinUrl": "<LinkedIn URL if found by Amplemarket, else omit>",
-  "email": "<email if found by Amplemarket, else omit>"
+  "linkedinUrl": "<LinkedIn URL if available, else omit>",
+  "email": "<email if available, else omit>"
 }
 ```
 
-**Routing logic inside n8n** (handled automatically):
-- If `linkedinUrl` is in the body → Clay enriches from LinkedIn → returns `{found, email, phone, source: "clay-linkedin"}`
-- If `email` is in the body → Clay enriches from email → returns `{found, phone, linkedin, source: "clay-email"}`
-- If neither → returns `{found: false, source: "no-linkedin-or-email-provided"}`
+Routing inside n8n (automatic):
+- `linkedinUrl` present → Clay enriches from LinkedIn → returns `{found, email, phone}`
+- `email` present → Clay enriches from email → returns `{found, phone, linkedin}`
+- Neither → returns `{found: false}`
 
-**Wait for the response** — n8n holds the connection until Clay responds (up to 5 minutes). If it times out, note it in the output and skip the fallback result.
-
-Merge the n8n response fields into the contact data, labelling source as "Clay (via n8n)".
+Wait for the response (sync, up to 5 minutes). If it times out or returns `found: false`, move to Step 4.
 
 ---
 
-## Step 4 — Show Results and Confirm HubSpot Update
+## Step 4 — Web Search Fallback
 
-Display the structured brief (see format below), then ask:
+**Trigger when**: Step 3 returned nothing, timed out, or was skipped (no LinkedIn URL, no email to pass).
 
-> "Update HubSpot with this data? Type **yes** to update existing record, **create** to create a new contact, or **no** to skip."
+Run web searches to find contact data from public sources:
+1. `"{first name} {last name}" "{company}" email` — look for email address
+2. `"{first name} {last name}" "{company}" phone OR contact` — look for direct phone number
+3. `"{first name} {last name}" "{company}" LinkedIn` — look for LinkedIn profile URL
+4. `site:{company_domain} "{first name} {last name}"` — look for contact page, team page, or bio
 
-- **yes** → search HubSpot for an existing contact by email or name+company. If found, update it silently, then confirm what was written.
-- **create** → create a new HubSpot contact with the enriched fields. Confirm the created record URL.
-- **no** → skip HubSpot entirely.
+Extract from results:
+- Email address (from team pages, press releases, directory listings)
+- Phone number (direct line or mobile — flag clearly if it might be a switchboard)
+- LinkedIn profile URL
 
-**Fields to write to HubSpot contact** (only if data is present):
-- `email` — work email
-- `phone` — direct dial only (never HQ number)
-- `hs_linkedin_profile_url` — LinkedIn profile URL
-- `jobtitle` — job title
+**If a LinkedIn URL or email is found via web search**:
+→ Re-run Step 3 with that LinkedIn URL or email in the webhook body. Label results as "Clay (via web search)".
 
-Never write `companyPhone` to the contact's phone field.
+**If Step 3 also finds nothing after web search**:
+→ Report what was found from web search alone and label source as "Web search (unverified)".
 
 ---
 
-## Step 5 — Structured Output Brief
+## Output Brief
+
+Always display this at the end, regardless of how much was found. Label every field with its source.
 
 ```
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -104,27 +110,33 @@ CONTACT
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Name:         [First Last]
 Job Title:    [title or "not found"]
-Email:        [email] — source: [Amplemarket / Clay / not found]
-Direct Dial:  [phone or "not found"]
-LinkedIn:     [url or "not found"]
+Email:        [email] — [Amplemarket / Clay (LinkedIn) / Clay (email) / Clay (via web search) / Web search (unverified) / not found]
+Direct Dial:  [phone or "not found"] — [source]
+LinkedIn:     [url or "not found"] — [source]
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 COMPANY
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Domain:       [domain or "not found"]
-HQ Phone:     [company phone or "not found"] ← reference only, not written to HubSpot
+HQ Phone:     [company phone or "not found"] ← reference only
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-HUBSPOT
+COPY TO HUBSPOT MANUALLY
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-[Updated ✓ / Created ✓ / Skipped]
+Email:        [value] → property: email
+Phone:        [direct dial only] → property: phone
+LinkedIn:     [url] → property: hs_linkedin_profile_url
+Job Title:    [title] → property: jobtitle
+
+⚠️  Do not copy HQ phone to the contact's phone field.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
 
 ---
 
-## Rules Summary
-- Never add HQ/switchboard number to a contact's phone field — direct dial only
-- Always retry `reveal_email` up to 3x before falling back to n8n
-- Always label the source of each data point (Amplemarket / Clay / not found)
-- Show the brief first, then ask before touching HubSpot
-- Company phone (HQ) is displayed in the brief for reference but never written to the contact
+## Rules
+- Never update HubSpot — not automatically, not after prompting. Output only.
+- Direct dial only in the phone field — never HQ/switchboard
+- Always label the source of every data point
+- Retry `reveal_email` up to 3x before falling back
+- If web search finds a LinkedIn URL or email, always re-route through n8n/Clay before stopping

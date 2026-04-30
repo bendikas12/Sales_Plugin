@@ -52,7 +52,7 @@ Capture only:
 
 Also trigger here directly if the user provided a LinkedIn URL as input (skipping Step 1).
 
-POST to the n8n enrichment webhook:
+### 3a — POST to n8n webhook
 
 **URL**: `https://getpliant.app.n8n.cloud/webhook/contact-enrichment`
 
@@ -68,12 +68,47 @@ POST to the n8n enrichment webhook:
 }
 ```
 
+n8n responds immediately with `{"message":"Workflow was started"}`. Clay runs in background (1–5 min).
+
 Routing inside n8n (automatic):
 - `linkedinUrl` present → Clay enriches from LinkedIn → returns `{found, email, phone}`
 - `email` present → Clay enriches from email → returns `{found, phone, linkedin}`
-- Neither → returns `{found: false}`
+- Neither → returns `{found: false}` immediately
 
-Wait for the response (sync, up to 5 minutes). If it times out or returns `found: false`, move to Step 4.
+### 3b — Find the execution ID
+
+Immediately after the POST, list the most recent executions:
+
+```
+n8n_executions(action="list", workflowId="fIdH8yhvewzFWN0p", limit=1)
+```
+
+Take `executions[0].id` — that's the execution just started.
+
+### 3c — Poll for result
+
+```
+n8n_executions(action="get", id="<executionId>", mode="summary")
+```
+
+- `status == "waiting"` → Clay hasn't responded yet — poll again (max 6 min / ~15 polls)
+- `status == "success"` → done, read output (see 3d)
+- `status == "error"` or 6 min elapsed → fall through to Step 4
+
+### 3d — Read result
+
+```
+n8n_executions(action="get", id="<executionId>", mode="filtered", nodeNames=["Relevant Info", "Relevant info", "Not Found Result"])
+```
+
+The Set node output contains:
+- `found` — boolean or string `"true"`/`"false"`
+- `email` — work email (LinkedIn path)
+- `phone` — direct dial
+- `linkedin` — LinkedIn URL (email path)
+- `source` — `"clay-linkedin"` | `"clay-email"` | `"no-linkedin-or-email-provided"`
+
+If `found` is false or source is `"no-linkedin-or-email-provided"`, move to Step 4.
 
 ---
 

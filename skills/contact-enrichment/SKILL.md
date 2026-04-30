@@ -135,43 +135,38 @@ Extract from results:
 
 ---
 
-## Output Brief
+## Output
 
-Always display this at the end, regardless of how much was found. Label every field with its source.
+Always show two blocks at the end.
 
+**Block 1 — Research summary** (sources for reference):
 ```
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-CONTACT
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Name:         [First Last]
-Job Title:    [title or "not found"]
-Email:        [email] — [Amplemarket / Clay (LinkedIn) / Clay (email) / Clay (via web search) / Web search (unverified) / not found]
-Direct Dial:  [phone or "not found"] — [source]
-LinkedIn:     [url or "not found"] — [source]
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-COMPANY
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Domain:       [domain or "not found"]
-HQ Phone:     [company phone or "not found"] ← reference only
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-COPY TO HUBSPOT MANUALLY
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Email:        [value] → property: email
-Phone:        [direct dial only] → property: phone
-LinkedIn:     [url] → property: hs_linkedin_profile_url
-Job Title:    [title] → property: jobtitle
-
-⚠️  Do not copy HQ phone to the contact's phone field.
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Name:        [First Last]
+Job Title:   [title] — [source]
+Email:       [email] — [source]
+Phone:       [phone] — [source]
+LinkedIn:    [url] — [source]
+Domain:      [domain]
+HQ Phone:    [company phone] ← reference only, do NOT copy to contact
 ```
+
+**Block 2 — HubSpot copy-paste** (values only, no sources, ready to paste):
+```
+📋 COPY TO HUBSPOT
+
+Email:      [value or leave blank]
+Phone:      [direct dial only — leave blank if not found]
+LinkedIn:   [url or leave blank]
+Job Title:  [title or leave blank]
+```
+
+No extra text in Block 2. Just the four lines. User copies them directly into HubSpot contact properties.
 
 ---
 
 ## Rules
-- Never update HubSpot — not automatically, not after prompting. Output only.
-- Direct dial only in the phone field — never HQ/switchboard
-- Always label the source of every data point
+- **Never update HubSpot** — not automatically, not after any prompt. Output only.
+- Direct dial only in Phone — never HQ/switchboard number
+- Always label source in Block 1
 - Retry `reveal_email` up to 3x before falling back
 - If web search finds a LinkedIn URL or email, always re-route through n8n/Clay before stopping

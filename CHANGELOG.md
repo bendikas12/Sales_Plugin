@@ -1,3 +1,7 @@
+## 0.3.1 - 2026-04-30
+- Fixed: contact-enrichment n8n timeout — webhook now uses async pattern (responseMode onReceived + execution polling); removed broken RespondToWebhook nodes and AI Agent
+- Changed: contact-enrichment output simplified to two blocks — research summary with sources + clean 4-line HubSpot copy-paste section; no auto-update to HubSpot
+
 ## 0.3.0 - 2026-04-28
 - Added: contact-enrichment skill — enrich a prospect's email, direct dial, LinkedIn, and job title via Amplemarket → Clay/n8n → web search fallback chain; output only, no HubSpot update
 ## 0.15.3 - 2026-04-24

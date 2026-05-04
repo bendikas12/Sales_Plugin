@@ -12,7 +12,7 @@ Skills are invoked automatically when Claude detects a relevant task, or explici
 
 | Skill | What it does |
 |-------|-------------|
-| **contact-enrichment** | Find a prospect's email, direct dial, LinkedIn, and job title. Runs through Amplemarket → Clay/n8n → web search. Outputs a clean copy-paste block for manual entry in HubSpot — never updates CRM automatically. |
+| **contact-company-enrichment** | Enrich a prospect's company (domain, HQ phone) and contact (email, direct dial, LinkedIn, job title). Company enrichment runs first to scope the person lookup. Routes through Amplemarket → Clay/n8n → web search. Outputs a clean copy-paste block for manual entry in HubSpot — never updates CRM automatically. |
 | **meeting-prep** | Generate a pre-meeting brief in minutes: company snapshot, contact intel, tailored discovery questions, pain points, and an opening insight. Uses web research + HubSpot context. |
 | **hubspot-record-analysis** | Work with any HubSpot record (deal, contact, or company). Accepts a name, ID, or HubSpot URL. Runs a full analysis or answers a specific question about the record. |
 | **email-followup-v2** | Draft a post-meeting follow-up email. Multi-meeting synthesis, prior email thread awareness, engagement history, and the rep's own writing voice. Output renders in Claude for copy into Gmail. |

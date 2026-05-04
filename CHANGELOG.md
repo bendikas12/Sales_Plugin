@@ -1,3 +1,9 @@
+## 0.4.0 - 2026-05-04
+- Renamed: `contact-enrichment` skill → `contact-company-enrichment` (directory + frontmatter + README) to reflect that it enriches both company and contact data
+- Changed: company enrichment now runs BEFORE person enrichment so the resolved domain scopes the person lookup and avoids picking the wrong individual at a similarly-named company
+- Changed: a supplied LinkedIn URL no longer skips Amplemarket — Amplemarket person enrichment always runs first; the LinkedIn URL is passed as additional context and only flows into the n8n/Clay fallback if Amplemarket returns no email and no direct dial
+- Removed: top-level "Direct dial only in Phone — never HQ/switchboard number" rule from the Rules section (the direct-dial guidance still lives next to the Phone capture and the HubSpot copy-paste block)
+
 ## 0.3.1 - 2026-04-30
 - Fixed: contact-enrichment n8n timeout — webhook now uses async pattern (responseMode onReceived + execution polling); removed broken RespondToWebhook nodes and AI Agent
 - Changed: contact-enrichment output simplified to two blocks — research summary with sources + clean 4-line HubSpot copy-paste section; no auto-update to HubSpot

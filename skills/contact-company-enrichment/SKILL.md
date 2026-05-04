@@ -1,26 +1,41 @@
 ---
-name: contact-enrichment
-description: Enrich a prospect's contact data via Amplemarket (email, direct dial, LinkedIn, job title) with Clay/n8n and web search fallbacks. Use when prospecting a new contact and you need their contact details.
+name: contact-company-enrichment
+description: Enrich a prospect's company and contact data — company domain/phone via Amplemarket, then person email, direct dial, LinkedIn, and job title via Amplemarket, with Clay/n8n and web search fallbacks. Use when prospecting a new contact and you need both company and contact details.
 ---
 
-# Contact Enrichment Skill
+# Contact & Company Enrichment Skill
 
 ## Purpose
-Given a person's name and company (or a LinkedIn URL), find their email, direct dial phone, LinkedIn URL, and job title.
+Given a person's name and company (or a LinkedIn URL), enrich both the company (domain, HQ phone) and the person (email, direct dial phone, LinkedIn URL, job title).
 Sources in order: Amplemarket → n8n/Clay → Web search.
+Company is enriched first so the resolved domain can disambiguate the person lookup.
 Output is a structured brief. HubSpot is never updated automatically.
 
 ## Input
 Ask the user for (if not already provided):
 - First name + Last name + Company name
-- OR a LinkedIn URL directly (skips Amplemarket person search, goes straight to n8n/Clay)
 - (Optional) Company domain
+- (Optional) LinkedIn URL — used as additional context for Amplemarket; it does NOT skip Amplemarket
 
 ---
 
-## Step 1 — Amplemarket Person Enrichment
+## Step 1 — Amplemarket Company Enrichment
 
-Use `mcp__amplemarket__find_person` with `reveal_email: true`.
+Run **before** person enrichment so the resolved domain can scope the person lookup and avoid picking the wrong individual at a similarly-named company.
+
+Use `mcp__amplemarket__find_company` with domain (preferred) or company name.
+
+Capture:
+- `company_domain`
+- `company_phone` — HQ/switchboard (shown in brief for reference, never written to HubSpot contact)
+
+---
+
+## Step 2 — Amplemarket Person Enrichment
+
+Always run Amplemarket person enrichment first — even when the user supplied a LinkedIn URL. The LinkedIn URL is passed through as additional context, not a reason to skip Amplemarket.
+
+Use `mcp__amplemarket__find_person` with `reveal_email: true`, scoped by `company_domain` from Step 1 when available.
 
 If no result or empty response, try `mcp__amplemarket__search_people` using company name and person name.
 
@@ -28,29 +43,15 @@ If no result or empty response, try `mcp__amplemarket__search_people` using comp
 
 Capture:
 - `email` — work email address
-- `phone` — **direct dial only** (personal mobile or direct work line). If the number is a company HQ/switchboard, do NOT capture it as a person phone — store it as `companyPhone` for Step 2 reference only.
+- `phone` — **direct dial only** (personal mobile or direct work line). If the number is a company HQ/switchboard, do NOT capture it as a person phone — keep the HQ number on `company_phone` from Step 1 instead.
 - `linkedin_url` — LinkedIn profile URL
 - `job_title` — current title
-
-If the user provided a LinkedIn URL directly as input, skip Step 1 and go to Step 3.
-
----
-
-## Step 2 — Amplemarket Company Enrichment
-
-Use `mcp__amplemarket__find_company` with domain (preferred) or company name.
-
-Capture only:
-- `company_domain`
-- `company_phone` — HQ/switchboard (shown in brief for reference, never written to HubSpot contact)
 
 ---
 
 ## Step 3 — n8n/Clay Fallback
 
-**Trigger when**: Step 1 returned no email AND no direct dial (a LinkedIn URL alone is not enough to skip this step).
-
-Also trigger here directly if the user provided a LinkedIn URL as input (skipping Step 1).
+**Trigger when**: Step 2 returned no email AND no direct dial. A LinkedIn URL alone (whether captured in Step 2 or supplied as input) is not enough to skip this step.
 
 ### 3a — POST to n8n webhook
 
@@ -166,7 +167,8 @@ No extra text in Block 2. Just the four lines. User copies them directly into Hu
 
 ## Rules
 - **Never update HubSpot** — not automatically, not after any prompt. Output only.
-- Direct dial only in Phone — never HQ/switchboard number
-- Always label source in Block 1
-- Retry `reveal_email` up to 3x before falling back
-- If web search finds a LinkedIn URL or email, always re-route through n8n/Clay before stopping
+- Always run company enrichment (Step 1) before person enrichment (Step 2).
+- Always run Amplemarket person enrichment before falling back to n8n/Clay — a supplied LinkedIn URL does not skip Amplemarket.
+- Always label source in Block 1.
+- Retry `reveal_email` up to 3x before falling back.
+- If web search finds a LinkedIn URL or email, always re-route through n8n/Clay before stopping.

@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<script type="application/json" id="cowork-artifact-meta">
+{
+  "name": "Unread Inbox",
+  "schemaVersion": 1,
+  "description": "Live view of unread Gmail inbox threads. Each card has a \"Draft reply\" button that creates a draft in Gmail via create_draft.",
+  "mcpTools": [
+    "{{SEARCH_TOOL}}",
+    "{{GET_THREAD_TOOL}}",
+    "{{DRAFT_TOOL}}"
+  ],
+  "mcpServerNames": [
+    "Gmail",
+    "Gmail",
+    "Gmail"
+  ]
+}
+</script>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Unread Inbox</title>
+<style>
+:root { color-scheme: light; }
+* { box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 16px; background: #fafafa; color: #1a1a1a; }
+h1 { font-size: 18px; margin: 0 0 12px; }
+.meta { color: #666; font-size: 13px; margin-bottom: 16px; }
+.email { background: #fff; border: 1px solid #e5e5e5; border-radius: 8px; padding: 14px; margin-bottom: 10px; }
+.email-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 6px; }
+.from { font-weight: 600; font-size: 14px; }
+.date { color: #888; font-size: 12px; white-space: nowrap; }
+.subject { font-size: 14px; margin-bottom: 6px; color: #222; }
+.snippet { font-size: 13px; color: #555; line-height: 1.4; margin-bottom: 10px; }
+.actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+button { background: #1a73e8; color: #fff; border: none; padding: 6px 14px; border-radius: 6px; font-size: 13px; cursor: pointer; }
+button:hover { background: #1557b0; }
+button:disabled { background: #aaa; cursor: not-allowed; }
+button.secondary { background: #666; }
+button.ai { background: #6b46c1; }
+button.ai:hover { background: #553c9a; }
+.draft-area { display: none; margin-top: 10px; padding-top: 10px; border-top: 1px solid #eee; }
+.draft-area.open { display: block; }
+textarea { width: 100%; min-height: 140px; padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-family: inherit; font-size: 13px; resize: vertical; }
+.status { font-size: 12px; color: #2e7d32; margin-left: 8px; }
+.status.err { color: #c62828; }
+.empty { text-align: center; color: #888; padding: 40px; }
+.loading { text-align: center; color: #666; padding: 40px; }
+.thread-ctx { font-size: 12px; color: #888; margin-top: 6px; font-style: italic; }
+</style>
+</head>
+<body>
+<h1>Unread Inbox</h1>
+<div class="meta" id="meta">Loading…</div>
+<div id="list"><div class="loading">Fetching unread threads…</div></div>
+
+<script>
+const SEARCH_TOOL = "{{SEARCH_TOOL}}";
+const DRAFT_TOOL = "{{DRAFT_TOOL}}";
+const GET_THREAD_TOOL = "{{GET_THREAD_TOOL}}";
+const USER_EMAIL = "{{REP_EMAIL}}";
+
+function esc(s) { return (s || "").replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+function unwrap(res) {
+  let data = res;
+  if (data && data.content && Array.isArray(data.content)) {
+    const text = data.content.map(c => c.text || "").join("");
+    try { data = JSON.parse(text); } catch (_) { data = { raw: text }; }
+  }
+  if (typeof data === "string") {
+    try { data = JSON.parse(data); } catch (_) {}
+  }
+  return data;
+}
+
+function parseSender(raw) {
+  if (!raw) return { name: "", email: "" };
+  const m = raw.match(/^\s*"?([^"<]+?)"?\s*<([^>]+)>\s*$/);
+  if (m) return { name: m[1].trim(), email: m[2].trim() };
+  return { name: raw, email: raw.includes("@") ? raw.trim() : "" };
+}
+
+function fmtDate(iso) {
+  if (!iso) return "";
+  const d = new Date(iso);
+  const now = new Date();
+  const diff = (now - d) / 86400000;
+  if (diff < 1) return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  if (diff < 7) return d.toLocaleDateString([], { weekday: "short" });
+  return d.toLocaleDateString([], { month: "short", day: "numeric" });
+}
+
+async function load() {
+  const list = document.getElementById("list");
+  const meta = document.getElementById("meta");
+  try {
+    const data = unwrap(await window.cowork.callMcpTool(SEARCH_TOOL, { query: "is:unread in:inbox", pageSize: 50 }));
+    const threads = (data && data.threads) || [];
+    const unread = [];
+    for (const t of threads) {
+      const msgs = t.messages || [];
+      const last = msgs[msgs.length - 1];
+      if (!last) continue;
+      unread.push({ threadId: t.id, msg: last });
+    }
+    meta.textContent = unread.length + " unread thread" + (unread.length === 1 ? "" : "s");
+    if (unread.length === 0) { list.innerHTML = '<div class="empty">Inbox zero. Nice.</div>'; return; }
+    list.innerHTML = unread.map((u, i) => {
+      const s = parseSender(u.msg.sender);
+      return `
+        <div class="email" data-i="${i}">
+          <div class="email-header">
+            <div class="from">${esc(s.name || s.email)}</div>
+            <div class="date">${esc(fmtDate(u.msg.date))}</div>
+          </div>
+          <div class="subject">${esc(u.msg.subject || "(no subject)")}</div>
+          <div class="snippet">${esc(u.msg.snippet || "")}</div>
+          <div class="actions">
+            <button data-act="ai">AI draft reply</button>
+            <button data-act="manual" class="secondary">Manual draft</button>
+            <span class="status" data-role="status"></span>
+          </div>
+          <div class="draft-area" data-role="draft">
+            <div class="thread-ctx" data-role="ctx"></div>
+            <textarea placeholder="Reply text…"></textarea>
+            <input type="text" data-role="adjust" placeholder="Adjust: e.g. 'make it shorter', 'more formal', 'add asking about timeline'" style="width:100%; margin-top:8px; padding:8px; border:1px solid #ddd; border-radius:6px; font-size:13px;" />
+            <div class="actions" style="margin-top:8px">
+              <button data-act="send">Create draft in Gmail</button>
+              <button data-act="adjust" class="ai">Apply adjustment</button>
+              <button data-act="regen" class="ai">Regenerate</button>
+              <button data-act="cancel" class="secondary">Cancel</button>
+            </div>
+          </div>
+        </div>`;
+    }).join("");
+
+    list.querySelectorAll(".email").forEach(card => {
+      const i = +card.dataset.i;
+      const u = unread[i];
+      const s = parseSender(u.msg.sender);
+      const draftArea = card.querySelector('[data-role="draft"]');
+      const ta = card.querySelector("textarea");
+      const status = card.querySelector('[data-role="status"]');
+      const ctx = card.querySelector('[data-role="ctx"]');
+      const adjustInput = card.querySelector('[data-role="adjust"]');
+      let cachedThread = null;
+
+      async function fetchThreadMessages() {
+        const td = unwrap(await window.cowork.callMcpTool(GET_THREAD_TOOL, { threadId: u.threadId, messageFormat: "FULL_CONTENT" }));
+        return (td && td.messages) || (td && td.thread && td.thread.messages) || [];
+      }
+
+      async function getThreadData() {
+        if (cachedThread) return cachedThread;
+        const msgs = await fetchThreadMessages();
+        ctx.textContent = "Context: " + msgs.length + " message" + (msgs.length === 1 ? "" : "s") + " in thread";
+        cachedThread = msgs.map(m => {
+          const sp = parseSender(m.sender);
+          const who = sp.email && sp.email.toLowerCase() === USER_EMAIL.toLowerCase() ? "ME" : (sp.name || sp.email);
+          const body = (m.plaintextBody || m.plainTextBody || m.body || m.snippet || "").toString().slice(0, 2000);
+          return { from: who, date: m.date || "", subject: m.subject || "", body: body };
+        });
+        return cachedThread;
+      }
+
+      function extractText(result) {
+        return typeof result === "string" ? result : (result && (result.text || result.content || JSON.stringify(result)));
+      }
+
+      async function generateAIDraft() {
+        status.classList.remove("err");
+        status.textContent = "Reading thread…";
+        const threadData = await getThreadData();
+        const prompt = "Draft an email reply on behalf of " + USER_EMAIL + ". " +
+          "Read the full thread (in data) and write a context-aware reply to the most recent message. " +
+          "Match the tone of prior messages from ME. Concise, professional, direct. " +
+          "No subject line, no greeting header, no signature, no quoted text — only the reply body.";
+        status.textContent = "Drafting with AI…";
+        const result = await window.cowork.askClaude(prompt, threadData);
+        ta.value = (extractText(result) || "").trim();
+        status.textContent = "AI draft ready — edit, adjust, or send";
+      }
+
+      async function applyAdjustment() {
+        const instruction = (adjustInput.value || "").trim();
+        if (!instruction) { status.textContent = "Type an adjustment first"; status.classList.add("err"); return; }
+        const current = ta.value.trim();
+        if (!current) { status.textContent = "No draft to adjust — generate one first"; status.classList.add("err"); return; }
+        status.classList.remove("err");
+        const threadData = await getThreadData();
+        const payload = [
+          { kind: "thread", messages: threadData },
+          { kind: "current_draft", text: current },
+          { kind: "instruction", text: instruction }
+        ];
+        const prompt = "Revise the email reply draft (in data under 'current_draft') based on the user's instruction (in data under 'instruction'). " +
+          "Use the original thread (in data under 'thread') for context. Output only the revised reply body — no subject, no greeting header, no signature, no quoted text.";
+        status.textContent = "Adjusting with AI…";
+        const result = await window.cowork.askClaude(prompt, payload);
+        ta.value = (extractText(result) || "").trim();
+        adjustInput.value = "";
+        status.textContent = "Adjustment applied";
+      }
+
+      card.querySelectorAll("button").forEach(btn => {
+        btn.addEventListener("click", async () => {
+          const act = btn.dataset.act;
+          if (act === "cancel") { draftArea.classList.remove("open"); return; }
+          if (act === "manual") {
+            draftArea.classList.add("open");
+            ctx.textContent = "";
+            ta.value = "";
+            ta.focus();
+            return;
+          }
+          if (act === "ai" || act === "regen") {
+            draftArea.classList.add("open");
+            btn.disabled = true;
+            try { await generateAIDraft(); }
+            catch (e) { status.textContent = "AI failed: " + (e && e.message ? e.message : e); status.classList.add("err"); }
+            finally { btn.disabled = false; }
+            return;
+          }
+          if (act === "adjust") {
+            btn.disabled = true;
+            try { await applyAdjustment(); }
+            catch (e) { status.textContent = "Adjust failed: " + (e && e.message ? e.message : e); status.classList.add("err"); }
+            finally { btn.disabled = false; }
+            return;
+          }
+          if (act === "send") {
+            if (!s.email) { status.textContent = "No sender email"; status.classList.add("err"); return; }
+            const body = ta.value.trim();
+            if (!body) { status.textContent = "Empty reply"; status.classList.add("err"); return; }
+            btn.disabled = true;
+            status.classList.remove("err");
+            status.textContent = "Creating draft…";
+            try {
+              const subj = u.msg.subject || "";
+              const replySubj = /^re:/i.test(subj) ? subj : "Re: " + subj;
+              await window.cowork.callMcpTool(DRAFT_TOOL, {
+                to: [s.email],
+                subject: replySubj,
+                body: body,
+                replyToMessageId: u.msg.id
+              });
+              status.textContent = "Draft created in Gmail";
+              draftArea.classList.remove("open");
+            } catch (e) {
+              status.textContent = "Failed: " + (e && e.message ? e.message : e);
+              status.classList.add("err");
+            } finally {
+              btn.disabled = false;
+            }
+          }
+        });
+      });
+    });
+  } catch (e) {
+    list.innerHTML = '<div class="empty">Error: ' + esc(String(e && e.message || e)) + '</div>';
+  }
+}
+load();
+</script>
+</body>
+</html>

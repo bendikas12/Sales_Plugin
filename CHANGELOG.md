@@ -1,3 +1,6 @@
+## 0.4.0 - 2026-05-12
+- Added: unread-inbox-artifact skill — installs a persistent Cowork artifact (id `unread-inbox`) showing unread Gmail threads with AI-drafted replies, manual drafts, free-text adjustments, and one-click "Create draft in Gmail". Skill resolves the rep's email and Gmail MCP tool names (search_threads, get_thread, create_draft) at runtime so the same template works for any user; HTML template lives at `skills/unread-inbox-artifact/references/artifact-template.html` and is rendered via `{{SEARCH_TOOL}}`, `{{GET_THREAD_TOOL}}`, `{{DRAFT_TOOL}}`, `{{REP_EMAIL}}` substitution.
+
 ## 0.3.1 - 2026-04-30
 - Fixed: contact-enrichment n8n timeout — webhook now uses async pattern (responseMode onReceived + execution polling); removed broken RespondToWebhook nodes and AI Agent
 - Changed: contact-enrichment output simplified to two blocks — research summary with sources + clean 4-line HubSpot copy-paste section; no auto-update to HubSpot

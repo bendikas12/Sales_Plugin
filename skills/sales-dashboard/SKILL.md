@@ -226,6 +226,23 @@ print(int(total))
 
 Format the volume tokens with the rep's currency if known (else EUR) and thousand separators, e.g. `€450,000`. Null / missing values are treated as 0 by the script — don't warn, some deals legitimately have no expected volume filled in yet.
 
+### Overdue Deals in Pipeline (n8n → Google Sheet)
+
+Same pattern as the Spend Gap fetch below, but a different workflow.
+
+1. Execute workflow `LtpP0jfhfNzdLU6m`, mode `production`, input `{ "type": "chat", "chatInput": "<REP.email>" }` — substitute `<REP.email>` with the invoker's email resolved in Step 1. The workflow's AI Agent extracts the email and uses it to filter the "Overdue Deals in Pipeline" Google Sheet by `HubSpot Owner Email`.
+2. Poll `get_execution` with `includeData: false`, backoff 2→4→8s capped at 30s, ceiling ~2 min, until `status != "running"`.
+3. Fetch `get_execution` with `includeData: true, nodeNames: ["Get row(s) in sheet"]`. Rows = that node's output items mapped to their `json` payload.
+4. Match sheet headers case-insensitively after stripping non-alphanumerics so minor header renames don't break the table. The columns we render are:
+   - `Deal name` (e.g. sheet column `Deal Name`)
+   - `Deal stage` (e.g. sheet column `Deal Stage` / `Name of Deal Stage`)
+   - `Days in current stage`
+   - `Total Addressable Spend` (e.g. sheet column `Total Addressable Spend` / `Total Addressable Monthly Transaction Volume`)
+   - `Expected Monthly Transaction Volume`
+5. **Sort the rows by "Days in pipeline" descending and take the top 5.** Match the sort column heuristically: prefer a header normalising to `daysinpipeline`; fall back to `daysincurrentstage` if a dedicated pipeline-age column doesn't exist. Coerce to integer; missing / non-numeric → sort to the bottom.
+6. HTML-escape cell values. Format `Total Addressable Spend` and `Expected Monthly Transaction Volume` as `€` with thousand separators. Empty cell → `N/A`.
+7. If the n8n MCP isn't available, workflow status isn't `success`, or the node is missing from `runData`: set `OVERDUE_DEALS_ROWS_HTML` to `<tr><td colspan="5" class="sub">N/A</td></tr>` and add one `Note:` line in the chat summary. Never invent rows.
+
 ### Biggest Spend Gap companies (n8n → Google Sheet)
 
 Load n8n MCP tool schemas with `ToolSearch` keyword `n8n` (prefix varies per env).
@@ -258,6 +275,7 @@ Load n8n MCP tool schemas with `ToolSearch` keyword `n8n` (prefix varies per env
    - `{{SUBMITTED_CREDIT_30D_VOL}}`, `{{ACCOUNT_ACTIVATED_30D_VOL}}` — pre-formatted currency strings
    - `{{PIPELINE_STAGE_DATA_JSON}}` — raw JSON array, inlined as a JS literal (no surrounding quotes)
    - `{{SPEND_GAP_ROWS_HTML}}` — raw `<tr>` rows, inlined verbatim as HTML (no surrounding quotes, no pretty-printing)
+   - `{{OVERDUE_DEALS_ROWS_HTML}}` — raw `<tr>` rows for the Overdue Deals table (top 5), inlined verbatim as HTML (no surrounding quotes, no pretty-printing)
 3. Write the result to the **absolute path resolved in the Output rules** (the `echo`ed value from the bash block). Use the Write tool — it overwrites existing files by design, which is what the rep's bookmark relies on. Do not re-derive the path here; reuse the one already computed.
 
 ---
@@ -287,6 +305,10 @@ Last 30d throughput
   Demos scheduled   <DEMO_SCHEDULED_30D>
   Submitted credit  <SUBMITTED_CREDIT_30D_VOL>   (expected trx volume)
   Activated         <ACCOUNT_ACTIVATED_30D_VOL>   (expected trx volume)
+
+Overdue Deals in Pipeline (top 5)
+  <Deal Name> — stage <Deal Stage> · days in current stage <Days in current stage> · total addressable spend <Total Addressable Spend> · exp monthly trx vol <Expected Monthly Transaction Volume>
+  ... (one line per row, top 5 by days in pipeline; full list is in the HTML)
 
 Biggest Spend Gap — Companies (top 10)
   <Name> — gap <Spending Gap> · exp trx vol <Hubspot Exp Monthly Trx Vol> · activated <Org Activation Date> · max util <Max Util Exp Vol 0 365>

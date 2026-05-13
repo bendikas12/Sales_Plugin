@@ -255,7 +255,7 @@ async function load() {
         const prompt = "Draft an email reply on behalf of " + USER_EMAIL + ". " +
           "Read the full thread (in data) and write a context-aware reply to the most recent message. " +
           "Match the tone of prior messages from ME. Concise, professional, direct. " +
-          "Start with a short greeting that addresses the sender by first name when known (e.g. 'Hi Anna,'); fall back to 'Hi,' if the name is unknown. " +
+          "Start with a short greeting that addresses the sender by first name when known (e.g. 'Hi Anna,'); fall back to 'Hi,' if the name is unknown. Adapt to language you write in." +
           "No subject line, no signature, no quoted text — only the greeting and reply body.";
         status.textContent = "Drafting with AI…";
         const result = await window.cowork.askClaude(prompt, threadData);

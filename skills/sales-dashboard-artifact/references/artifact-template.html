@@ -456,16 +456,30 @@ async function fetchThroughputCards(W) {
 }
 
 async function pollN8nExecution(executionId, workflowId) {
-  let delay = 2000;
-  const deadline = Date.now() + 150_000;
+  const PENDING = new Set(["running", "new", "started", "waiting", "pending"]);
+  const TERMINAL = new Set(["success", "error", "failed", "canceled", "cancelled", "crashed", "timeout"]);
+  await new Promise(r => setTimeout(r, 6000));
+  const deadline = Date.now() + 90_000;
+  let lastShape = "";
   while (Date.now() < deadline) {
-    const res = unwrap(await window.cowork.callMcpTool(N8N_GET_EXEC, { executionId, workflowId, includeData: false }));
+    const res = unwrap(await withTimeout(
+      window.cowork.callMcpTool(N8N_GET_EXEC, { executionId, workflowId, includeData: false }),
+      20_000, "get_execution(poll)"
+    ));
+    lastShape = JSON.stringify(res).slice(0, 300);
     const status = res?.status || res?.execution?.status;
-    if (status && status !== "running" && status !== "new") return status;
-    await new Promise(r => setTimeout(r, delay));
-    delay = Math.min(delay * 2, 30_000);
+    if (status && TERMINAL.has(status)) return status;
+    if (status && !PENDING.has(status)) return status;
+    await new Promise(r => setTimeout(r, 4000));
   }
-  return "timeout";
+  throw new Error("poll timeout exec=" + executionId + " lastShape=" + lastShape);
+}
+
+function withTimeout(promise, ms, label) {
+  return Promise.race([
+    promise,
+    new Promise((_, rej) => setTimeout(() => rej(new Error(label + " timed out after " + ms + "ms")), ms))
+  ]);
 }
 
 function normHeader(s) { return String(s || "").toLowerCase().replace(/[^a-z0-9]/g, ""); }
@@ -482,19 +496,40 @@ function pickCell(row, candidates) {
 function fmtIntEUR(v) { const n = parseFloat(v); return isNaN(n) ? "N/A" : "€" + Math.round(n).toLocaleString("en-US"); }
 
 async function runN8nWorkflow(workflowId) {
-  const exec = unwrap(await window.cowork.callMcpTool(N8N_EXEC, {
-    workflowId, executionMode: "production", inputs: { type: "chat", chatInput: REP_EMAIL }
-  }));
+  if (!N8N_EXEC || !N8N_GET_EXEC) throw new Error("n8n connector not installed");
+  const exec = unwrap(await withTimeout(
+    window.cowork.callMcpTool(N8N_EXEC, {
+      workflowId, executionMode: "production", inputs: { type: "chat", chatInput: REP_EMAIL }
+    }),
+    30_000, "execute_workflow " + workflowId
+  ));
   const id = exec?.executionId || exec?.id || exec?.execution?.id;
-  if (!id) throw new Error("no executionId from n8n");
+  if (!id) throw new Error("no executionId from n8n: " + JSON.stringify(exec).slice(0, 200));
   const status = await pollN8nExecution(id, workflowId);
-  if (status !== "success") throw new Error("n8n status=" + status);
-  const data = unwrap(await window.cowork.callMcpTool(N8N_GET_EXEC, {
-    executionId: id, workflowId, includeData: true, nodeNames: ["Get row(s) in sheet"]
-  }));
-  const runData = data?.data?.resultData?.runData || data?.execution?.data?.resultData?.runData || {};
-  const node = runData["Get row(s) in sheet"];
-  if (!node) throw new Error("node 'Get row(s) in sheet' missing");
+  if (status !== "success") throw new Error("n8n exec " + id + " status=" + status);
+
+  await new Promise(r => setTimeout(r, 2000));
+  let runData = {};
+  let node = null;
+  let lastErr = null;
+  for (let attempt = 0; attempt < 4; attempt++) {
+    try {
+      const data = unwrap(await withTimeout(
+        window.cowork.callMcpTool(N8N_GET_EXEC, {
+          executionId: id, workflowId, includeData: true, nodeNames: ["Get row(s) in sheet"]
+        }),
+        45_000, "get_execution(data)"
+      ));
+      runData = data?.data?.resultData?.runData || data?.execution?.data?.resultData?.runData || {};
+      node = runData["Get row(s) in sheet"];
+      if (node && node[0]?.data?.main) break;
+    } catch (e) {
+      lastErr = e;
+    }
+    await new Promise(r => setTimeout(r, 3000));
+  }
+  if (!node && lastErr) throw lastErr;
+  if (!node) throw new Error("node 'Get row(s) in sheet' missing in exec " + id);
   const items = node[0]?.data?.main?.[0] || [];
   return items.map(i => i.json || i);
 }
@@ -553,6 +588,12 @@ async function refresh() {
   document.getElementById("spendGapBody").innerHTML = '<tr><td colspan="5" class="sub">Waiting for n8n…</td></tr>';
 
   const W = timeWindows();
+  const n8nChain = (async () => {
+    const a = fetchOverdueDeals();
+    await new Promise(r => setTimeout(r, 250));
+    const b = fetchSpendGap();
+    await Promise.allSettled([a, b]);
+  })();
   const tasks = [
     ["calls", fetchCalls(W)],
     ["emails", fetchEmails(W)],
@@ -561,8 +602,7 @@ async function refresh() {
     ["meetings", fetchMeetings(W)],
     ["pipeline", fetchPipeline()],
     ["throughput", fetchThroughputCards(W)],
-    ["overdue_deals", fetchOverdueDeals()],
-    ["spend_gap", fetchSpendGap()],
+    ["n8n_tables", n8nChain],
   ];
   const results = await Promise.allSettled(tasks.map(t => t[1]));
   const errors = [];

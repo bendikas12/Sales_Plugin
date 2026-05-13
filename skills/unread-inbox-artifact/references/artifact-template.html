@@ -26,19 +26,31 @@
 body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 16px; background: #fafafa; color: #1a1a1a; }
 h1 { font-size: 18px; margin: 0 0 12px; }
 .meta { color: #666; font-size: 13px; margin-bottom: 16px; }
-.email { background: #fff; border: 1px solid #e5e5e5; border-radius: 8px; padding: 14px; margin-bottom: 10px; }
+.email { position: relative; background: #fff; border: 1px solid #e5e5e5; border-radius: 8px; padding: 14px 14px 14px 18px; margin-bottom: 10px; overflow: hidden; }
+.email::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: transparent; }
+.email[data-state="drafted"]::before { background: #f59e0b; }
+.email[data-state="sent"]::before { background: #16a34a; }
+.email[data-state="dismissed"]::before { background: #9ca3af; }
 .email-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 6px; }
 .from { font-weight: 600; font-size: 14px; }
+.right-header { display: flex; align-items: center; gap: 8px; }
 .date { color: #888; font-size: 12px; white-space: nowrap; }
+.badge { font-size: 10px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; padding: 2px 6px; border-radius: 4px; display: none; }
+.email[data-state="drafted"] .badge.drafted { display: inline-block; background: #fef3c7; color: #92400e; }
+.email[data-state="sent"] .badge.sent { display: inline-block; background: #dcfce7; color: #166534; }
+.email[data-state="dismissed"] .badge.dismissed { display: inline-block; background: #f3f4f6; color: #4b5563; }
 .subject { font-size: 14px; margin-bottom: 6px; color: #222; }
 .snippet { font-size: 13px; color: #555; line-height: 1.4; margin-bottom: 10px; }
 .actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.dismiss-wrap { margin-left: auto; }
 button { background: #1a73e8; color: #fff; border: none; padding: 6px 14px; border-radius: 6px; font-size: 13px; cursor: pointer; }
 button:hover { background: #1557b0; }
 button:disabled { background: #aaa; cursor: not-allowed; }
 button.secondary { background: #666; }
 button.ai { background: #6b46c1; }
 button.ai:hover { background: #553c9a; }
+button.ghost { background: transparent; color: #9ca3af; padding: 4px 8px; font-size: 12px; }
+button.ghost:hover { background: #f3f4f6; color: #6b7280; }
 .draft-area { display: none; margin-top: 10px; padding-top: 10px; border-top: 1px solid #eee; }
 .draft-area.open { display: block; }
 textarea { width: 100%; min-height: 140px; padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-family: inherit; font-size: 13px; resize: vertical; }
@@ -47,6 +59,11 @@ textarea { width: 100%; min-height: 140px; padding: 8px; border: 1px solid #ddd;
 .empty { text-align: center; color: #888; padding: 40px; }
 .loading { text-align: center; color: #666; padding: 40px; }
 .thread-ctx { font-size: 12px; color: #888; margin-top: 6px; font-style: italic; }
+.expand-caret { display: none; font-size: 12px; color: #6b7280; cursor: pointer; padding: 2px 6px; user-select: none; }
+.email.collapsed { padding-top: 8px; padding-bottom: 8px; }
+.email.collapsed .subject, .email.collapsed .snippet, .email.collapsed .actions, .email.collapsed .draft-area { display: none; }
+.email.collapsed .email-header { margin-bottom: 0; }
+.email.collapsed .expand-caret { display: inline-block; }
 </style>
 </head>
 <body>
@@ -59,6 +76,8 @@ const SEARCH_TOOL = "{{SEARCH_TOOL}}";
 const DRAFT_TOOL = "{{DRAFT_TOOL}}";
 const GET_THREAD_TOOL = "{{GET_THREAD_TOOL}}";
 const USER_EMAIL = "{{REP_EMAIL}}";
+
+const STATE_ORDER = { pending: 0, drafted: 1, sent: 2, dismissed: 3 };
 
 function esc(s) { return (s || "").replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
@@ -91,6 +110,25 @@ function fmtDate(iso) {
   return d.toLocaleDateString([], { month: "short", day: "numeric" });
 }
 
+function setState(card, state) {
+  card.dataset.state = state;
+  if (state === "sent" || state === "dismissed") card.classList.add("collapsed");
+  else card.classList.remove("collapsed");
+  resortList();
+}
+
+function resortList() {
+  const list = document.getElementById("list");
+  const cards = Array.from(list.querySelectorAll(".email"));
+  cards.sort((a, b) => {
+    const sa = STATE_ORDER[a.dataset.state] ?? 0;
+    const sb = STATE_ORDER[b.dataset.state] ?? 0;
+    if (sa !== sb) return sa - sb;
+    return (+a.dataset.i) - (+b.dataset.i);
+  });
+  cards.forEach(c => list.appendChild(c));
+}
+
 async function load() {
   const list = document.getElementById("list");
   const meta = document.getElementById("meta");
@@ -109,10 +147,16 @@ async function load() {
     list.innerHTML = unread.map((u, i) => {
       const s = parseSender(u.msg.sender);
       return `
-        <div class="email" data-i="${i}">
+        <div class="email" data-i="${i}" data-state="pending">
           <div class="email-header">
             <div class="from">${esc(s.name || s.email)}</div>
-            <div class="date">${esc(fmtDate(u.msg.date))}</div>
+            <div class="right-header">
+              <span class="badge drafted">Drafted</span>
+              <span class="badge sent">Sent</span>
+              <span class="badge dismissed">Dismissed</span>
+              <span class="date">${esc(fmtDate(u.msg.date))}</span>
+              <span class="expand-caret" data-act="expand" title="Expand">▸</span>
+            </div>
           </div>
           <div class="subject">${esc(u.msg.subject || "(no subject)")}</div>
           <div class="snippet">${esc(u.msg.snippet || "")}</div>
@@ -120,6 +164,7 @@ async function load() {
             <button data-act="ai">AI draft reply</button>
             <button data-act="manual" class="secondary">Manual draft</button>
             <span class="status" data-role="status"></span>
+            <span class="dismiss-wrap"><button data-act="dismiss" class="ghost" title="Hide this thread — no reply needed">Dismiss</button></span>
           </div>
           <div class="draft-area" data-role="draft">
             <div class="thread-ctx" data-role="ctx"></div>
@@ -128,7 +173,6 @@ async function load() {
             <div class="actions" style="margin-top:8px">
               <button data-act="send">Create draft in Gmail</button>
               <button data-act="adjust" class="ai">Apply adjustment</button>
-              <button data-act="regen" class="ai">Regenerate</button>
               <button data-act="cancel" class="secondary">Cancel</button>
             </div>
           </div>
@@ -145,6 +189,14 @@ async function load() {
       const ctx = card.querySelector('[data-role="ctx"]');
       const adjustInput = card.querySelector('[data-role="adjust"]');
       let cachedThread = null;
+
+      function markDraftedIfContent() {
+        if (card.dataset.state === "sent" || card.dataset.state === "dismissed") return;
+        if (ta.value.trim()) setState(card, "drafted");
+        else setState(card, "pending");
+      }
+
+      ta.addEventListener("input", markDraftedIfContent);
 
       async function fetchThreadMessages() {
         const td = unwrap(await window.cowork.callMcpTool(GET_THREAD_TOOL, { threadId: u.threadId, messageFormat: "FULL_CONTENT" }));
@@ -180,6 +232,7 @@ async function load() {
         const result = await window.cowork.askClaude(prompt, threadData);
         ta.value = (extractText(result) || "").trim();
         status.textContent = "AI draft ready — edit, adjust, or send";
+        markDraftedIfContent();
       }
 
       async function applyAdjustment() {
@@ -201,20 +254,29 @@ async function load() {
         ta.value = (extractText(result) || "").trim();
         adjustInput.value = "";
         status.textContent = "Adjustment applied";
+        markDraftedIfContent();
       }
 
-      card.querySelectorAll("button").forEach(btn => {
-        btn.addEventListener("click", async () => {
+      card.querySelectorAll("[data-act]").forEach(btn => {
+        btn.addEventListener("click", async (ev) => {
           const act = btn.dataset.act;
+          if (act === "expand") {
+            card.classList.remove("collapsed");
+            if (card.dataset.state === "dismissed") setState(card, ta.value.trim() ? "drafted" : "pending");
+            return;
+          }
           if (act === "cancel") { draftArea.classList.remove("open"); return; }
+          if (act === "dismiss") {
+            setState(card, "dismissed");
+            return;
+          }
           if (act === "manual") {
             draftArea.classList.add("open");
             ctx.textContent = "";
-            ta.value = "";
             ta.focus();
             return;
           }
-          if (act === "ai" || act === "regen") {
+          if (act === "ai") {
             draftArea.classList.add("open");
             btn.disabled = true;
             try { await generateAIDraft(); }
@@ -247,6 +309,7 @@ async function load() {
               });
               status.textContent = "Draft created in Gmail";
               draftArea.classList.remove("open");
+              setState(card, "sent");
             } catch (e) {
               status.textContent = "Failed: " + (e && e.message ? e.message : e);
               status.classList.add("err");

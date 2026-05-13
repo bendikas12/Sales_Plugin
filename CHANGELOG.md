@@ -1,3 +1,6 @@
+## 0.4.1 - 2026-05-13
+- Changed: unread-inbox-artifact card states — added pending/drafted/sent/dismissed states shown via a 4px left stripe (orange/green/gray) plus a small badge. Cards auto-collapse to a one-line strip when sent or dismissed, and list re-sorts so pending/drafted float to top and sent/dismissed sink. Drafted state activates only when the textarea has content. Removed the "Regenerate" button (use AI draft reply again or Apply adjustment). Added a tertiary "Dismiss" button placed at the far right of the actions row (ghost styling) so it isn't easy to mis-click.
+
 ## 0.4.0 - 2026-05-12
 - Added: unread-inbox-artifact skill — installs a persistent Cowork artifact (id `unread-inbox`) showing unread Gmail threads with AI-drafted replies, manual drafts, free-text adjustments, and one-click "Create draft in Gmail". Skill resolves the rep's email and Gmail MCP tool names (search_threads, get_thread, create_draft) at runtime so the same template works for any user; HTML template lives at `skills/unread-inbox-artifact/references/artifact-template.html` and is rendered via `{{SEARCH_TOOL}}`, `{{GET_THREAD_TOOL}}`, `{{DRAFT_TOOL}}`, `{{REP_EMAIL}}` substitution.
 

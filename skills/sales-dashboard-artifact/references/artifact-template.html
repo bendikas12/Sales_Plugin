@@ -455,11 +455,11 @@ async function fetchThroughputCards(W) {
   setCell("activated_30_vol", fmtEUR(sumVol(activated.results)));
 }
 
-async function pollN8nExecution(executionId) {
+async function pollN8nExecution(executionId, workflowId) {
   let delay = 2000;
   const deadline = Date.now() + 150_000;
   while (Date.now() < deadline) {
-    const res = unwrap(await window.cowork.callMcpTool(N8N_GET_EXEC, { executionId, includeData: false }));
+    const res = unwrap(await window.cowork.callMcpTool(N8N_GET_EXEC, { executionId, workflowId, includeData: false }));
     const status = res?.status || res?.execution?.status;
     if (status && status !== "running" && status !== "new") return status;
     await new Promise(r => setTimeout(r, delay));
@@ -483,14 +483,14 @@ function fmtIntEUR(v) { const n = parseFloat(v); return isNaN(n) ? "N/A" : "€"
 
 async function runN8nWorkflow(workflowId) {
   const exec = unwrap(await window.cowork.callMcpTool(N8N_EXEC, {
-    workflowId, mode: "production", input: { type: "chat", chatInput: REP_EMAIL }
+    workflowId, executionMode: "production", inputs: { type: "chat", chatInput: REP_EMAIL }
   }));
   const id = exec?.executionId || exec?.id || exec?.execution?.id;
   if (!id) throw new Error("no executionId from n8n");
-  const status = await pollN8nExecution(id);
+  const status = await pollN8nExecution(id, workflowId);
   if (status !== "success") throw new Error("n8n status=" + status);
   const data = unwrap(await window.cowork.callMcpTool(N8N_GET_EXEC, {
-    executionId: id, includeData: true, nodeNames: ["Get row(s) in sheet"]
+    executionId: id, workflowId, includeData: true, nodeNames: ["Get row(s) in sheet"]
   }));
   const runData = data?.data?.resultData?.runData || data?.execution?.data?.resultData?.runData || {};
   const node = runData["Get row(s) in sheet"];

@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<script type="application/json" id="cowork-artifact-meta">
+{
+  "name": "Sales Dashboard",
+  "schemaVersion": 1,
+  "description": "Live sales dashboard for the rep — refreshes HubSpot activity, pipeline, unread Gmail, today's meetings, and n8n-fed tables on demand.",
+  "mcpTools": [
+    "{{HS_SEARCH_CRM_TOOL}}",
+    "{{HS_SEARCH_OWNERS_TOOL}}",
+    "{{GMAIL_SEARCH_TOOL}}",
+    "{{CAL_LIST_EVENTS_TOOL}}",
+    "{{N8N_EXECUTE_TOOL}}",
+    "{{N8N_GET_EXECUTION_TOOL}}"
+  ],
+  "mcpServerNames": [
+    "HubSpot",
+    "HubSpot",
+    "Gmail",
+    "Google Calendar",
+    "n8n",
+    "n8n"
+  ]
+}
+</script>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Sales Dashboard — {{REP_NAME}}</title>
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #0e0f13;
+    --card: #171821;
+    --card-hi: #1e2030;
+    --border: #2a2d3d;
+    --text: #e8e9ee;
+    --muted: #8b8fa3;
+    --accent: #6ea8ff;
+    --ok: #4ade80;
+    --warn: #f59e0b;
+    --bad: #ef4444;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; padding: 24px; }
+  header { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 24px; border-bottom: 1px solid var(--border); padding-bottom: 16px; }
+  header h1 { margin: 0; font-size: 20px; font-weight: 600; letter-spacing: -0.01em; }
+  header .right { display: flex; align-items: center; gap: 12px; }
+  header .updated { color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+  button.reload { background: var(--accent); color: #0e0f13; border: none; padding: 6px 14px; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; }
+  button.reload:disabled { background: #3a4252; color: #8b8fa3; cursor: not-allowed; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px; display: flex; flex-direction: column; gap: 6px; min-height: 90px; }
+  .card .label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+  .card .value { font-size: 32px; font-weight: 600; font-variant-numeric: tabular-nums; line-height: 1.1; }
+  .card .sub { font-size: 12px; color: var(--muted); }
+  .card .split { display: flex; gap: 22px; margin-top: 4px; flex-wrap: wrap; }
+  .card .split .col { display: flex; flex-direction: column; gap: 2px; }
+  .card .split .col .k { font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+  .card .split .col .v { font-size: 20px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .section-title { margin: 24px 0 10px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); }
+  .accent { color: var(--accent); } .warn { color: var(--warn); } .bad { color: var(--bad); } .ok { color: var(--ok); }
+  .skeleton { background: linear-gradient(90deg, #1e2030 0%, #262838 50%, #1e2030 100%); background-size: 200% 100%; animation: shimmer 1.4s infinite; border-radius: 4px; color: transparent !important; }
+  @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+  .chart-card, .table-card { padding: 18px 22px 14px; }
+  .chart-card .canvas-wrap { position: relative; height: 280px; margin-top: 4px; }
+  .table-card table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; margin-top: 10px; }
+  .table-card th, .table-card td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); font-size: 13px; }
+  .table-card th { color: var(--muted); font-weight: 500; text-transform: uppercase; letter-spacing: 0.08em; font-size: 11px; }
+  .table-card tbody tr:last-child td { border-bottom: none; }
+  footer { margin-top: 28px; color: var(--muted); font-size: 12px; border-top: 1px solid var(--border); padding-top: 12px; display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  .err-banner { background: #3a1b1b; border: 1px solid #6b2727; color: #fca5a5; padding: 8px 12px; border-radius: 8px; margin-bottom: 16px; font-size: 13px; display: none; }
+  .err-banner.show { display: block; }
+</style>
+</head>
+<body>
+  <header>
+    <h1>Sales Dashboard — {{REP_NAME}}</h1>
+    <div class="right">
+      <span class="updated" id="updated">Never refreshed</span>
+      <button class="reload" id="reload">Reload</button>
+    </div>
+  </header>
+
+  <div class="err-banner" id="errBanner"></div>
+
+  <div class="section-title">HubSpot activity</div>
+  <div class="grid">
+    <div class="card">
+      <div class="label">Calls logged</div>
+      <div class="split">
+        <div class="col"><div class="k">This week</div><div class="v" data-cell="calls_week">—</div></div>
+        <div class="col"><div class="k">This month</div><div class="v" data-cell="calls_month">—</div></div>
+      </div>
+      <div class="split">
+        <div class="col"><div class="k">Last 30d</div><div class="v" data-cell="calls_l30">—</div></div>
+        <div class="col"><div class="k">Prior 30d</div><div class="v" data-cell="calls_p30">—</div></div>
+        <div class="col"><div class="k">Δ</div><div class="v" data-cell="calls_delta">—</div></div>
+      </div>
+      <div class="sub">HubSpot Call engagements owned by you · Δ compares last 30d vs days 31–60</div>
+    </div>
+
+    <div class="card">
+      <div class="label">Emails sent</div>
+      <div class="split">
+        <div class="col"><div class="k">This week</div><div class="v" data-cell="emails_week">—</div></div>
+        <div class="col"><div class="k">This month</div><div class="v" data-cell="emails_month">—</div></div>
+      </div>
+      <div class="sub">Outbound Email engagements logged in HubSpot</div>
+    </div>
+
+    <div class="card">
+      <div class="label">Overdue tasks</div>
+      <div class="value warn" data-cell="overdue_tasks">—</div>
+      <div class="sub">HubSpot tasks past due, assigned to you</div>
+    </div>
+  </div>
+
+  <div class="section-title">Inbox &amp; calendar</div>
+  <div class="grid">
+    <div class="card">
+      <div class="label">Unread emails</div>
+      <div class="value" data-cell="unread">—</div>
+      <div class="sub">Gmail — unread in inbox</div>
+    </div>
+
+    <div class="card">
+      <div class="label">Meetings today</div>
+      <div class="split">
+        <div class="col"><div class="k">Total</div><div class="v" data-cell="meetings_total">—</div></div>
+        <div class="col"><div class="k">Customer-facing</div><div class="v accent" data-cell="meetings_cf">—</div></div>
+      </div>
+      <div class="sub">Customer-facing = at least one external attendee</div>
+    </div>
+  </div>
+
+  <div class="section-title">Sales pipeline</div>
+  <div class="grid">
+    <div class="card">
+      <div class="label">Open deals</div>
+      <div class="value" data-cell="pipeline_deals">—</div>
+      <div class="sub">Excludes Account activated, Churned, Closed lost</div>
+    </div>
+    <div class="card">
+      <div class="label">Expected volume</div>
+      <div class="value accent" data-cell="expected_volume">—</div>
+      <div class="sub">Sum of Expected Monthly Transaction Volume across open deals</div>
+    </div>
+  </div>
+
+  <div class="section-title">Last 30 days — funnel throughput</div>
+  <div class="grid">
+    <div class="card">
+      <div class="label">Demos scheduled</div>
+      <div class="value accent" data-cell="demo_30">—</div>
+      <div class="sub">Deals that entered Discovery / Demo Scheduled in the last 30 days</div>
+    </div>
+    <div class="card">
+      <div class="label">Submitted to credit — exp volume</div>
+      <div class="value accent" data-cell="submitted_30_vol">—</div>
+      <div class="sub">Sum of Expected Monthly Transaction Volume for deals that entered Submitted to credit in the last 30 days</div>
+    </div>
+    <div class="card">
+      <div class="label">Account activated — exp volume</div>
+      <div class="value ok" data-cell="activated_30_vol">—</div>
+      <div class="sub">Sum of Expected Monthly Transaction Volume for deals activated in the last 30 days</div>
+    </div>
+  </div>
+
+  <div class="section-title">Pipeline by stage</div>
+  <div class="card chart-card">
+    <div class="label">Expected volume by deal stage</div>
+    <div class="canvas-wrap"><canvas id="pipelineByStage"></canvas></div>
+    <div class="sub">Sum of Expected Monthly Transaction Volume per stage (excludes Account activated, Churned, Closed Lost)</div>
+  </div>
+
+  <div class="section-title">Overdue Deals in Current Stage</div>
+  <div class="card table-card">
+    <div class="label">Top 5 deals by days in current stage</div>
+    <table>
+      <thead><tr><th>Deal name</th><th>Deal stage</th><th>Days in current stage</th><th>Total Addressable Spend</th><th>Expected Monthly Trx Volume</th></tr></thead>
+      <tbody id="overdueDealsBody"><tr><td colspan="5" class="sub">Waiting for n8n…</td></tr></tbody>
+    </table>
+    <div class="sub">Source: n8n workflow <code>LtpP0jfhfNzdLU6m</code></div>
+  </div>
+
+  <div class="section-title">Biggest Spend Gap — Companies</div>
+  <div class="card table-card">
+    <div class="label">Accounts with the largest gap between potential and actual spend</div>
+    <table>
+      <thead><tr><th>Name</th><th>Spending Gap</th><th>Hubspot Exp Monthly Trx Vol</th><th>Org Activation Date</th><th>Max Util Exp Vol 0 365</th></tr></thead>
+      <tbody id="spendGapBody"><tr><td colspan="5" class="sub">Waiting for n8n…</td></tr></tbody>
+    </table>
+    <div class="sub">Source: n8n workflow <code>WpHzZ6nsAERzp2H5</code></div>
+  </div>
+
+  <footer>
+    <span>Rep: {{REP_EMAIL}} · Owner ID: {{HUBSPOT_OWNER_ID}}</span>
+    <span id="footerStatus"></span>
+  </footer>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+const HS_SEARCH_CRM = "{{HS_SEARCH_CRM_TOOL}}";
+const GMAIL_SEARCH  = "{{GMAIL_SEARCH_TOOL}}";
+const CAL_LIST      = "{{CAL_LIST_EVENTS_TOOL}}";
+const N8N_EXEC      = "{{N8N_EXECUTE_TOOL}}";
+const N8N_GET_EXEC  = "{{N8N_GET_EXECUTION_TOOL}}";
+
+const REP_EMAIL     = "{{REP_EMAIL}}";
+const OWNER_ID      = "{{HUBSPOT_OWNER_ID}}";
+
+const SALES_PIPELINE_ID = "16177355";
+const EXCLUDED_STAGE_IDS = ["16177379", "16258181", "30637484"]; // activated, closed lost, churned
+const DEMO_TS_PROP        = "deal_stage_timestamp__demo_scheduled";
+const SUBMITTED_TS_PROP   = "deal_stage_timestamp__registered";
+const ACTIVATED_TS_PROP   = "deal_stage_timestamp__account_activated";
+
+const STAGE_ORDER = [
+  "Discovery / Demo Scheduled",
+  "Solution Qualification / Demo conducted",
+  "Business Case Validation",
+  "Commercial Alignment",
+  "Pre-Onboarding",
+  "Submitted to credit",
+  "Info requested",
+  "Info partially obtained",
+  "Info fully obtained",
+  "Submitted to partner bank",
+];
+
+let stageChart = null;
+
+function $(sel) { return document.querySelector(sel); }
+function setCell(name, val, cls) {
+  const el = document.querySelector(`[data-cell="${name}"]`);
+  if (!el) return;
+  el.textContent = val;
+  el.classList.remove("skeleton");
+  if (cls) { el.classList.remove("ok","bad","warn","accent"); el.classList.add(cls); }
+}
+function skeleton(name) {
+  const el = document.querySelector(`[data-cell="${name}"]`);
+  if (el) { el.textContent = "···"; el.classList.add("skeleton"); }
+}
+function esc(s) { return String(s ?? "").replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function fmtEUR(n) { if (n == null || isNaN(n)) return "N/A"; return "€" + Math.round(n).toLocaleString("en-US"); }
+
+function unwrap(res) {
+  let data = res;
+  if (data && data.content && Array.isArray(data.content)) {
+    const text = data.content.map(c => c.text || "").join("");
+    try { data = JSON.parse(text); } catch (_) { data = { raw: text }; }
+  }
+  if (typeof data === "string") { try { data = JSON.parse(data); } catch (_) {} }
+  return data;
+}
+
+function timeWindows() {
+  const now = new Date();
+  const todayStart = new Date(now); todayStart.setHours(0,0,0,0);
+  const todayEnd = new Date(now); todayEnd.setHours(23,59,59,999);
+  const dow = (todayStart.getDay() + 6) % 7; // Mon=0
+  const weekStart = new Date(todayStart); weekStart.setDate(todayStart.getDate() - dow);
+  const monthStart = new Date(todayStart.getFullYear(), todayStart.getMonth(), 1);
+  const last30Start = new Date(todayStart.getTime() - 30 * 86400000);
+  const prior30Start = new Date(todayStart.getTime() - 60 * 86400000);
+  const prior30End = new Date(last30Start.getTime() - 1);
+  return {
+    now: now.getTime(),
+    todayStart: todayStart.toISOString(),
+    todayEnd: todayEnd.toISOString(),
+    weekStart: weekStart.getTime(),
+    monthStart: monthStart.getTime(),
+    last30Start: last30Start.getTime(),
+    last30End: now.getTime(),
+    prior30Start: prior30Start.getTime(),
+    prior30End: prior30End.getTime(),
+  };
+}
+
+async function hsCount(objectType, filters) {
+  const res = unwrap(await window.cowork.callMcpTool(HS_SEARCH_CRM, {
+    objectType, filterGroups: [{ filters }], limit: 1
+  }));
+  return (res && (res.total ?? res.totalCount)) || 0;
+}
+
+async function hsSearchAll(objectType, filters, properties) {
+  let all = [], after = undefined, total = null;
+  for (let i = 0; i < 50; i++) {
+    const body = { objectType, filterGroups: [{ filters }], properties, limit: 100 };
+    if (after) body.after = after;
+    const res = unwrap(await window.cowork.callMcpTool(HS_SEARCH_CRM, body));
+    if (total == null) total = res?.total ?? 0;
+    const results = res?.results || [];
+    all = all.concat(results);
+    after = res?.paging?.next?.after;
+    if (!after || results.length === 0) break;
+  }
+  return { results: all, total };
+}
+
+async function fetchCalls(W) {
+  const buckets = [
+    ["calls_week", W.weekStart, W.now],
+    ["calls_month", W.monthStart, W.now],
+    ["calls_l30", W.last30Start, W.last30End],
+    ["calls_p30", W.prior30Start, W.prior30End],
+  ];
+  const out = {};
+  await Promise.all(buckets.map(async ([key, start, end]) => {
+    out[key] = await hsCount("Call", [
+      { propertyName: "hubspot_owner_id", operator: "EQ", value: OWNER_ID },
+      { propertyName: "hs_timestamp", operator: "GTE", value: String(start) },
+      { propertyName: "hs_timestamp", operator: "LTE", value: String(end) },
+    ]);
+    setCell(key, out[key]);
+  }));
+  const abs = out.calls_l30 - out.calls_p30;
+  let pct;
+  if (out.calls_p30 === 0 && out.calls_l30 === 0) pct = "—";
+  else if (out.calls_p30 === 0) pct = "new";
+  else pct = (abs >= 0 ? "+" : "") + Math.round(abs / out.calls_p30 * 100) + "%";
+  setCell("calls_delta", pct, abs >= 0 ? "ok" : "bad");
+}
+
+async function fetchEmails(W) {
+  const base = (start) => [
+    { propertyName: "hubspot_owner_id", operator: "EQ", value: OWNER_ID },
+    { propertyName: "hs_email_direction", operator: "EQ", value: "EMAIL" },
+    { propertyName: "hs_timestamp", operator: "GTE", value: String(start) },
+  ];
+  const [week, month] = await Promise.all([
+    hsCount("Emails", base(W.weekStart)),
+    hsCount("Emails", base(W.monthStart)),
+  ]);
+  setCell("emails_week", week);
+  setCell("emails_month", month);
+}
+
+async function fetchOverdueTasks(W) {
+  const total = await hsCount("Task", [
+    { propertyName: "hubspot_owner_id", operator: "EQ", value: OWNER_ID },
+    { propertyName: "hs_task_status", operator: "NEQ", value: "COMPLETED" },
+    { propertyName: "hs_timestamp", operator: "LT", value: String(W.now) },
+  ]);
+  setCell("overdue_tasks", total);
+}
+
+async function fetchUnread() {
+  const res = unwrap(await window.cowork.callMcpTool(GMAIL_SEARCH, { query: "is:unread in:inbox", pageSize: 100 }));
+  const threads = res?.threads || res?.results || [];
+  const count = res?.resultSizeEstimate ?? res?.total ?? threads.length;
+  setCell("unread", count);
+}
+
+async function fetchMeetings(W) {
+  const res = unwrap(await window.cowork.callMcpTool(CAL_LIST, {
+    calendarId: "primary", timeMin: W.todayStart, timeMax: W.todayEnd, singleEvents: true,
+  }));
+  const events = res?.events || res?.items || [];
+  let total = 0, customer = 0;
+  for (const ev of events) {
+    if (ev.status === "cancelled") continue;
+    if (ev.transparency === "transparent") continue;
+    total++;
+    const atts = ev.attendees || [];
+    const external = atts.some(a => {
+      if (!a.email) return false;
+      if (a.responseStatus === "declined") return false;
+      const dom = a.email.split("@")[1] || "";
+      return dom && dom !== "getpliant.com" && !dom.endsWith("resource.calendar.google.com");
+    });
+    if (external) customer++;
+  }
+  setCell("meetings_total", total);
+  setCell("meetings_cf", customer);
+}
+
+async function fetchPipeline() {
+  const filters = [
+    { propertyName: "hubspot_owner_id", operator: "EQ", value: OWNER_ID },
+    { propertyName: "pipeline", operator: "EQ", value: SALES_PIPELINE_ID },
+    { propertyName: "dealstage", operator: "NOT_IN", values: EXCLUDED_STAGE_IDS },
+  ];
+  const { results } = await hsSearchAll("Deal", filters, [
+    "dealname", "dealstage", "name_of_deal_stage", "expected_monthly_transaction_volume"
+  ]);
+  setCell("pipeline_deals", results.length);
+  let sum = 0;
+  const byStage = {};
+  for (const d of results) {
+    const v = parseFloat(d.properties?.expected_monthly_transaction_volume || 0) || 0;
+    sum += v;
+    const stage = d.properties?.name_of_deal_stage || "Unknown";
+    byStage[stage] = (byStage[stage] || 0) + v;
+  }
+  setCell("expected_volume", fmtEUR(sum));
+  drawStageChart(byStage);
+}
+
+function drawStageChart(byStage) {
+  const known = STAGE_ORDER.map(s => ({ stage: s, expected: byStage[s] || 0 }));
+  const unknown = Object.keys(byStage).filter(s => !STAGE_ORDER.includes(s)).sort()
+    .map(s => ({ stage: s, expected: byStage[s] }));
+  const data = known.concat(unknown);
+  const canvas = document.getElementById("pipelineByStage");
+  if (!canvas || !window.Chart) return;
+  if (stageChart) stageChart.destroy();
+  const fmtAxis = v => v >= 1_000_000 ? "€" + (v/1_000_000).toFixed(1) + "M"
+                    : v >= 1_000     ? "€" + Math.round(v/1_000) + "k"
+                    : "€" + v;
+  stageChart = new Chart(canvas.getContext("2d"), {
+    type: "bar",
+    data: { labels: data.map(d => d.stage), datasets: [{
+      label: "Expected volume", data: data.map(d => d.expected),
+      backgroundColor: "#6ea8ff", borderRadius: 4, maxBarThickness: 56,
+    }]},
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: ctx => fmtEUR(ctx.parsed.y) },
+          backgroundColor: "#1e2030", borderColor: "#2a2d3d", borderWidth: 1,
+          titleColor: "#e8e9ee", bodyColor: "#e8e9ee" }
+      },
+      scales: {
+        x: { ticks: { color: "#8b8fa3", autoSkip: false, maxRotation: 30, minRotation: 0 }, grid: { color: "transparent" } },
+        y: { beginAtZero: true, ticks: { color: "#8b8fa3", callback: fmtAxis }, grid: { color: "#2a2d3d" } }
+      }
+    }
+  });
+}
+
+async function fetchStageThroughput(W, tsProp, properties) {
+  const filters = [
+    { propertyName: "hubspot_owner_id", operator: "EQ", value: OWNER_ID },
+    { propertyName: "pipeline", operator: "EQ", value: SALES_PIPELINE_ID },
+    { propertyName: tsProp, operator: "GTE", value: String(W.last30Start) },
+    { propertyName: tsProp, operator: "LTE", value: String(W.last30End) },
+  ];
+  return hsSearchAll("Deal", filters, properties);
+}
+
+async function fetchThroughputCards(W) {
+  const props = ["dealname", "expected_monthly_transaction_volume"];
+  const [demos, submitted, activated] = await Promise.all([
+    fetchStageThroughput(W, DEMO_TS_PROP, props),
+    fetchStageThroughput(W, SUBMITTED_TS_PROP, props),
+    fetchStageThroughput(W, ACTIVATED_TS_PROP, props),
+  ]);
+  setCell("demo_30", demos.results.length);
+  const sumVol = arr => arr.reduce((s, d) => s + (parseFloat(d.properties?.expected_monthly_transaction_volume || 0) || 0), 0);
+  setCell("submitted_30_vol", fmtEUR(sumVol(submitted.results)));
+  setCell("activated_30_vol", fmtEUR(sumVol(activated.results)));
+}
+
+async function pollN8nExecution(executionId) {
+  let delay = 2000;
+  const deadline = Date.now() + 150_000;
+  while (Date.now() < deadline) {
+    const res = unwrap(await window.cowork.callMcpTool(N8N_GET_EXEC, { executionId, includeData: false }));
+    const status = res?.status || res?.execution?.status;
+    if (status && status !== "running" && status !== "new") return status;
+    await new Promise(r => setTimeout(r, delay));
+    delay = Math.min(delay * 2, 30_000);
+  }
+  return "timeout";
+}
+
+function normHeader(s) { return String(s || "").toLowerCase().replace(/[^a-z0-9]/g, ""); }
+function pickCell(row, candidates) {
+  const keys = Object.keys(row);
+  for (const c of candidates) {
+    const want = normHeader(c);
+    const hit = keys.find(k => normHeader(k) === want);
+    if (hit != null) return row[hit];
+  }
+  return undefined;
+}
+
+function fmtIntEUR(v) { const n = parseFloat(v); return isNaN(n) ? "N/A" : "€" + Math.round(n).toLocaleString("en-US"); }
+
+async function runN8nWorkflow(workflowId) {
+  const exec = unwrap(await window.cowork.callMcpTool(N8N_EXEC, {
+    workflowId, mode: "production", input: { type: "chat", chatInput: REP_EMAIL }
+  }));
+  const id = exec?.executionId || exec?.id || exec?.execution?.id;
+  if (!id) throw new Error("no executionId from n8n");
+  const status = await pollN8nExecution(id);
+  if (status !== "success") throw new Error("n8n status=" + status);
+  const data = unwrap(await window.cowork.callMcpTool(N8N_GET_EXEC, {
+    executionId: id, includeData: true, nodeNames: ["Get row(s) in sheet"]
+  }));
+  const runData = data?.data?.resultData?.runData || data?.execution?.data?.resultData?.runData || {};
+  const node = runData["Get row(s) in sheet"];
+  if (!node) throw new Error("node 'Get row(s) in sheet' missing");
+  const items = node[0]?.data?.main?.[0] || [];
+  return items.map(i => i.json || i);
+}
+
+async function fetchOverdueDeals() {
+  const tbody = document.getElementById("overdueDealsBody");
+  try {
+    const rows = await runN8nWorkflow("LtpP0jfhfNzdLU6m");
+    rows.sort((a, b) => {
+      const da = parseInt(pickCell(a, ["Days in pipeline", "Days in current stage"]) || 0) || 0;
+      const db = parseInt(pickCell(b, ["Days in pipeline", "Days in current stage"]) || 0) || 0;
+      return db - da;
+    });
+    const top = rows.slice(0, 5);
+    if (!top.length) { tbody.innerHTML = '<tr><td colspan="5" class="sub">No overdue deals.</td></tr>'; return; }
+    tbody.innerHTML = top.map(r => {
+      const dealName = pickCell(r, ["Deal name", "Deal Name"]);
+      const stage = pickCell(r, ["Deal Stage", "Name of Deal Stage", "Deal stage"]);
+      const days = pickCell(r, ["Days in current stage", "Days in Current Stage"]);
+      const addr = pickCell(r, ["Total Addressable Spend", "Total Addressable Monthly Transaction Volume"]);
+      const exp = pickCell(r, ["Expected Monthly Transaction Volume", "Expected Monthly Trx Volume"]);
+      return `<tr><td>${esc(dealName||"N/A")}</td><td>${esc(stage||"N/A")}</td><td>${esc(days||"N/A")}</td><td>${fmtIntEUR(addr)}</td><td>${fmtIntEUR(exp)}</td></tr>`;
+    }).join("");
+  } catch (e) {
+    tbody.innerHTML = `<tr><td colspan="5" class="sub">N/A — ${esc(e.message||e)}</td></tr>`;
+  }
+}
+
+async function fetchSpendGap() {
+  const tbody = document.getElementById("spendGapBody");
+  try {
+    const rows = await runN8nWorkflow("WpHzZ6nsAERzp2H5");
+    if (!rows.length) { tbody.innerHTML = '<tr><td colspan="5" class="sub">No spend-gap rows.</td></tr>'; return; }
+    tbody.innerHTML = rows.slice(0, 10).map(r => {
+      const name = pickCell(r, ["Name", "Company"]);
+      const gap = pickCell(r, ["Spending Gap", "Spend Gap"]);
+      const exp = pickCell(r, ["Hubspot Exp Monthly Trx Vol", "Expected Monthly Transaction Volume"]);
+      const act = pickCell(r, ["Org Activation Date", "Activation Date"]);
+      const util = pickCell(r, ["Max Util Exp Vol 0 365", "Max Utilization"]);
+      const utilStr = (util == null || util === "") ? "N/A" : (Math.round(parseFloat(util) * 100) + "%");
+      return `<tr><td>${esc(name||"N/A")}</td><td>${fmtIntEUR(gap)}</td><td>${fmtIntEUR(exp)}</td><td>${esc(act||"N/A")}</td><td>${esc(utilStr)}</td></tr>`;
+    }).join("");
+  } catch (e) {
+    tbody.innerHTML = `<tr><td colspan="5" class="sub">N/A — ${esc(e.message||e)}</td></tr>`;
+  }
+}
+
+async function refresh() {
+  const btn = document.getElementById("reload");
+  const banner = document.getElementById("errBanner");
+  const footer = document.getElementById("footerStatus");
+  btn.disabled = true; btn.textContent = "Refreshing…";
+  banner.classList.remove("show"); banner.textContent = "";
+  ["calls_week","calls_month","calls_l30","calls_p30","calls_delta","emails_week","emails_month","overdue_tasks","unread","meetings_total","meetings_cf","pipeline_deals","expected_volume","demo_30","submitted_30_vol","activated_30_vol"].forEach(skeleton);
+  document.getElementById("overdueDealsBody").innerHTML = '<tr><td colspan="5" class="sub">Waiting for n8n…</td></tr>';
+  document.getElementById("spendGapBody").innerHTML = '<tr><td colspan="5" class="sub">Waiting for n8n…</td></tr>';
+
+  const W = timeWindows();
+  const tasks = [
+    ["calls", fetchCalls(W)],
+    ["emails", fetchEmails(W)],
+    ["tasks", fetchOverdueTasks(W)],
+    ["unread", fetchUnread()],
+    ["meetings", fetchMeetings(W)],
+    ["pipeline", fetchPipeline()],
+    ["throughput", fetchThroughputCards(W)],
+    ["overdue_deals", fetchOverdueDeals()],
+    ["spend_gap", fetchSpendGap()],
+  ];
+  const results = await Promise.allSettled(tasks.map(t => t[1]));
+  const errors = [];
+  results.forEach((r, i) => { if (r.status === "rejected") errors.push(tasks[i][0] + ": " + (r.reason?.message || r.reason)); });
+  document.getElementById("updated").textContent = "Updated " + new Date().toLocaleTimeString();
+  footer.textContent = errors.length ? (errors.length + " section(s) failed") : "All sections OK";
+  if (errors.length) { banner.textContent = "Errors: " + errors.join(" · "); banner.classList.add("show"); }
+  btn.disabled = false; btn.textContent = "Reload";
+}
+
+document.getElementById("reload").addEventListener("click", refresh);
+refresh();
+</script>
+</body>
+</html>

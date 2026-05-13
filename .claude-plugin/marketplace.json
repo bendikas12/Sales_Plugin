@@ -9,7 +9,7 @@
       "name": "sales-plugin",
       "source": "./",
       "description": "Pliant Sales Team productivity plugin — daily dashboard, deal prep, email follow-ups",
-      "version": "0.6.2"
+      "version": "0.6.3"
     }
   ]
 }

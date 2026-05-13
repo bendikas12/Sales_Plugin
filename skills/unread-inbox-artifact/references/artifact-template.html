@@ -179,7 +179,7 @@ async function load() {
             <div class="from">${esc(s.name || s.email)}</div>
             <div class="right-header">
               <span class="badge drafted">Drafted</span>
-              <span class="badge sent">Sent</span>
+              <span class="badge sent">Draft Created</span>
               <span class="badge dismissed">Dismissed</span>
               <span class="date">${esc(fmtDate(u.msg.date))}</span>
             </div>
@@ -255,7 +255,8 @@ async function load() {
         const prompt = "Draft an email reply on behalf of " + USER_EMAIL + ". " +
           "Read the full thread (in data) and write a context-aware reply to the most recent message. " +
           "Match the tone of prior messages from ME. Concise, professional, direct. " +
-          "No subject line, no greeting header, no signature, no quoted text — only the reply body.";
+          "Start with a short greeting that addresses the sender by first name when known (e.g. 'Hi Anna,'); fall back to 'Hi,' if the name is unknown. Adapt to language you write in." +
+          "No subject line, no signature, no quoted text — only the greeting and reply body.";
         status.textContent = "Drafting with AI…";
         const result = await window.cowork.askClaude(prompt, threadData);
         ta.value = (extractText(result) || "").trim();
@@ -276,7 +277,7 @@ async function load() {
           { kind: "instruction", text: instruction }
         ];
         const prompt = "Revise the email reply draft (in data under 'current_draft') based on the user's instruction (in data under 'instruction'). " +
-          "Use the original thread (in data under 'thread') for context. Output only the revised reply body — no subject, no greeting header, no signature, no quoted text.";
+          "Use the original thread (in data under 'thread') for context. Preserve the existing greeting line at the top of the draft unless the instruction explicitly asks to change it. Output only the revised reply (greeting + body) — no subject, no signature, no quoted text.";
         status.textContent = "Adjusting with AI…";
         const result = await window.cowork.askClaude(prompt, payload);
         ta.value = (extractText(result) || "").trim();

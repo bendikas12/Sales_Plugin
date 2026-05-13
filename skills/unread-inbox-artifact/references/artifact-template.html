@@ -59,16 +59,24 @@ textarea { width: 100%; min-height: 140px; padding: 8px; border: 1px solid #ddd;
 .empty { text-align: center; color: #888; padding: 40px; }
 .loading { text-align: center; color: #666; padding: 40px; }
 .thread-ctx { font-size: 12px; color: #888; margin-top: 6px; font-style: italic; }
-.expand-caret { display: none; font-size: 12px; color: #6b7280; cursor: pointer; padding: 2px 6px; user-select: none; }
-.email.collapsed { padding-top: 8px; padding-bottom: 8px; }
-.email.collapsed .subject, .email.collapsed .snippet, .email.collapsed .actions, .email.collapsed .draft-area { display: none; }
-.email.collapsed .email-header { margin-bottom: 0; }
-.email.collapsed .expand-caret { display: inline-block; }
+.tabs { display: flex; gap: 4px; border-bottom: 1px solid #e5e5e5; margin-bottom: 12px; }
+.tab { background: transparent; color: #6b7280; border: none; border-bottom: 2px solid transparent; padding: 8px 14px; font-size: 13px; font-weight: 500; cursor: pointer; border-radius: 0; }
+.tab:hover { background: #f3f4f6; color: #1a1a1a; }
+.tab.active { color: #1a73e8; border-bottom-color: #1a73e8; }
+.tab .count { color: #9ca3af; font-weight: 400; margin-left: 4px; }
+.tab.active .count { color: #1a73e8; }
+.email.hidden { display: none; }
 </style>
 </head>
 <body>
 <h1>Unread Inbox</h1>
 <div class="meta" id="meta">Loading…</div>
+<div class="tabs" id="tabs">
+  <button class="tab active" data-tab="unread">Unread<span class="count" data-count="unread">0</span></button>
+  <button class="tab" data-tab="in-progress">In Progress<span class="count" data-count="in-progress">0</span></button>
+  <button class="tab" data-tab="sent">Draft Created<span class="count" data-count="sent">0</span></button>
+  <button class="tab" data-tab="dismissed">Dismissed<span class="count" data-count="dismissed">0</span></button>
+</div>
 <div id="list"><div class="loading">Fetching unread threads…</div></div>
 
 <script>
@@ -77,9 +85,42 @@ const DRAFT_TOOL = "{{DRAFT_TOOL}}";
 const GET_THREAD_TOOL = "{{GET_THREAD_TOOL}}";
 const USER_EMAIL = "{{REP_EMAIL}}";
 
-const STATE_ORDER = { pending: 0, drafted: 1, sent: 2, dismissed: 3 };
+let activeTab = "unread";
 
 function esc(s) { return (s || "").replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+function cardMatchesTab(card, tab) {
+  const state = card.dataset.state;
+  if (tab === "unread") return state === "pending" || state === "drafted";
+  if (tab === "in-progress") return state === "drafted";
+  if (tab === "sent") return state === "sent";
+  if (tab === "dismissed") return state === "dismissed";
+  return true;
+}
+
+function applyTab() {
+  const list = document.getElementById("list");
+  const cards = Array.from(list.querySelectorAll(".email"));
+  const counts = { unread: 0, "in-progress": 0, sent: 0, dismissed: 0 };
+  cards.forEach(c => {
+    ["unread", "in-progress", "sent", "dismissed"].forEach(t => {
+      if (cardMatchesTab(c, t)) counts[t]++;
+    });
+    c.classList.toggle("hidden", !cardMatchesTab(c, activeTab));
+  });
+  Object.entries(counts).forEach(([t, n]) => {
+    const el = document.querySelector(`[data-count="${t}"]`);
+    if (el) el.textContent = n;
+  });
+  document.querySelectorAll(".tab").forEach(t => t.classList.toggle("active", t.dataset.tab === activeTab));
+}
+
+document.getElementById("tabs").addEventListener("click", (e) => {
+  const btn = e.target.closest(".tab");
+  if (!btn) return;
+  activeTab = btn.dataset.tab;
+  applyTab();
+});
 
 function unwrap(res) {
   let data = res;
@@ -112,21 +153,7 @@ function fmtDate(iso) {
 
 function setState(card, state) {
   card.dataset.state = state;
-  if (state === "sent" || state === "dismissed") card.classList.add("collapsed");
-  else card.classList.remove("collapsed");
-  resortList();
-}
-
-function resortList() {
-  const list = document.getElementById("list");
-  const cards = Array.from(list.querySelectorAll(".email"));
-  cards.sort((a, b) => {
-    const sa = STATE_ORDER[a.dataset.state] ?? 0;
-    const sb = STATE_ORDER[b.dataset.state] ?? 0;
-    if (sa !== sb) return sa - sb;
-    return (+a.dataset.i) - (+b.dataset.i);
-  });
-  cards.forEach(c => list.appendChild(c));
+  applyTab();
 }
 
 async function load() {
@@ -155,7 +182,6 @@ async function load() {
               <span class="badge sent">Sent</span>
               <span class="badge dismissed">Dismissed</span>
               <span class="date">${esc(fmtDate(u.msg.date))}</span>
-              <span class="expand-caret" data-act="expand" title="Expand">▸</span>
             </div>
           </div>
           <div class="subject">${esc(u.msg.subject || "(no subject)")}</div>
@@ -178,6 +204,8 @@ async function load() {
           </div>
         </div>`;
     }).join("");
+
+    applyTab();
 
     list.querySelectorAll(".email").forEach(card => {
       const i = +card.dataset.i;
@@ -260,11 +288,6 @@ async function load() {
       card.querySelectorAll("[data-act]").forEach(btn => {
         btn.addEventListener("click", async (ev) => {
           const act = btn.dataset.act;
-          if (act === "expand") {
-            card.classList.remove("collapsed");
-            if (card.dataset.state === "dismissed") setState(card, ta.value.trim() ? "drafted" : "pending");
-            return;
-          }
           if (act === "cancel") { draftArea.classList.remove("open"); return; }
           if (act === "dismiss") {
             setState(card, "dismissed");

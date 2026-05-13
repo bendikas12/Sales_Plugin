@@ -1,3 +1,6 @@
+## 0.6.2 - 2026-05-13
+- Fixed: unread-inbox-artifact "email disappears while drafting" bug — replaced state-based list resorting with a tab bar (Unread / In Progress / Draft Created / Dismissed). Unread tab shows pending + drafted cards, so a card no longer jumps out of view the moment the rep starts typing. In Progress filters cards with an active draft (state = drafted). Removed the collapse-on-terminal-state behavior and the expand caret since cards now move to their own tab instead. Cards are no longer re-ordered; tab counts in the header reflect live state.
+
 ## 0.6.1 - 2026-05-13
 - Fixed: sales-dashboard-artifact n8n calls — `execute_workflow` now passes `inputs` (plural) and `executionMode` per the MCP schema (was `input` / `mode`, which caused the workflow to run with empty input), and `get_execution` / polling now pass the required `workflowId` (was missing, causing status polling to error out and the Overdue Deals / Spend Gap tables to render `N/A — <message>`).
 
